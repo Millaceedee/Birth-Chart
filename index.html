@@ -936,7 +936,9 @@ $("f").addEventListener("submit", e => {
 
 function apply(){
   document.documentElement.lang = lang;
-  document.title = "Birth Chart – Free Natal Chart Calculator";
+  document.title = lang === "fi"
+    ? "Syntymäkartta – Ilmainen syntymäkarttalaskuri"
+    : "Birth Chart – Free Natal Chart Calculator";
   $("lb").textContent = lang === "fi" ? "In English" : "Suomeksi";
   $("title").childNodes[0].textContent = lang === "fi" ? "Syntymäkartta" : "Birth Chart";
   $("credit").innerHTML = lang === "fi"
