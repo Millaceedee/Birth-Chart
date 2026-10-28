@@ -45,6 +45,14 @@ You can use the chart directly in your browser without installing anything.
 
 The source code is available in this repository. You are welcome to explore it, learn from it and build upon it under the terms of the MIT License.
 
+## Tutorial
+
+Want to learn how I built Birth Chart?
+
+I've created a mini tutorial showing how I made this interactive birth chart. The tutorial is available on Patreon behind a paywall.
+
+**[📖 Read the Birth Chart mini tutorial on Patreon](https://www.patreon.com/Millaceedee/posts/creating-birth-173683060)** 🔒
+
 ## Original creator
 
 Created by **Millaceedee** in 2026.
