@@ -128,6 +128,32 @@ table.dist{width:auto;min-width:0}
 #tip.pin .x{display:block}
 #tip .x:hover{color:var(--bone)}
 @media(max-width:700px){#tip{left:10px!important;right:10px;bottom:10px;top:auto!important;width:auto;max-width:none;max-height:55dvh;overflow:auto}}
+
+/* --- zoom, reset button, mobile fit --- */
+body{overflow-x:clip}
+.chart{overflow:hidden;touch-action:pan-y}
+.chart.zoomed{touch-action:none}
+.chart.zoomed svg{cursor:grab}
+.chart svg{user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.zbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:-10px}
+.zbar button{background:none;border:1px solid var(--lav);color:var(--lav);min-width:44px;height:40px;border-radius:2px;cursor:pointer;font-size:20px;line-height:1;padding:0 12px}
+.zbar button:hover:not(:disabled){background:var(--plum2)}
+.zbar button:disabled{opacity:.35;cursor:default}
+.fh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.fh .lang{padding:2px 12px;font-size:13px}
+@media(max-width:700px){
+body{padding:16px 10px 48px}
+form{padding:16px 14px}
+label,.row>*,input,select{min-width:0}
+.quick{grid-template-columns:1fr}
+table,table.dist{min-width:0;width:100%}
+th,td{padding:6px 5px;font-size:13.5px;overflow-wrap:anywhere}
+.dist th,.dist td{padding:6px 4px;font-size:13px}
+.dist td.g{min-width:0;font-size:15px}
+table.at{width:100%;table-layout:fixed;margin:0}
+.at th,.at td{width:auto;min-width:0;height:26px;padding:0;font-size:13px}
+.at th{font-size:11px}
+}
 </style>
 </head>
 <body>
@@ -137,7 +163,7 @@ table.dist{width:auto;min-width:0}
 </header>
 <main>
 <form id="f" autocomplete="off" novalidate>
-<h2 data-t="your"></h2>
+<div class="fh"><h2 data-t="your"></h2><button type="button" class="lang" id="rs" data-t="reset"></button></div>
 <p class="help" data-t="intro"></p>
 <div class="row dt"><label><span data-t="date"></span><input type="date" id="d" required min="1800-01-01" max="2099-12-31" value="2000-01-01"></label>
 <label><span data-t="time"></span><input type="time" id="tm" value="12:00"></label></div>
@@ -612,7 +638,7 @@ const STARS=[
 ["Deneb",20.690528,45.28028,2600],["Fomalhaut",22.960847,-29.62224,25]];
 const L={fi:{
 sub:"Astrologinen kartta syntymähetkesi taivaasta – tutustu planeettojen sijainteihin ja niiden symbolisiin tulkintoihin.",your:"Tietosi",date:"Syntymäpäivä",time:"Syntymän kellonaika",unk:"En tiedä tarkkaa kellonaikaa",country:"Syntymämaa",place:"Syntymäpaikka",
-hint:"Syntymäpaikka määrittää, miltä taivas näytti juuri siellä syntymähetkelläsi. Kirjoita paikkakunnan alkua ja valitse se avautuvalta listalta.",man:"Syötä koordinaatit itse",tz:"Aikavyöhyke (IANA)",go:"Laske kartta",
+hint:"Syntymäpaikka määrittää, miltä taivas näytti juuri siellä syntymähetkelläsi. Kirjoita paikkakunnan nimi ja valitse se avautuvasta listasta.",man:"Syötä koordinaatit itse",tz:"Aikavyöhyke (IANA)",go:"Laske kartta",
 empty:"Täytä tietosi vasemmalta ja valitse paikka listasta, niin kartta piirtyy tähän.",pick:"Valitse paikkakunta listalta.",baddate:"Syötä syntymäpäivä.",badco:"Tarkista koordinaatit ja aikavyöhyke.",
 sign:["Oinas","Härkä","Kaksoset","Rapu","Leijona","Neitsyt","Vaaka","Skorpioni","Jousimies","Kauris","Vesimies","Kalat"],
 kw:["rohkea ja välitön","vakaa ja aistillinen","utelias ja vaihteleva","suojaava ja tunteellinen","loistava ja antelias","tarkka ja käytännöllinen","tasapainoa ja kumppanuutta etsivä","syvä ja intensiivinen","vapautta ja merkitystä etsivä","kurinalainen ja kunnianhimoinen","omaperäinen ja riippumaton","herkkä ja mielikuvituksellinen"],
@@ -626,13 +652,13 @@ aspm:"Aspektit",aspAll:"Pää- ja sivuaspektit",aspMaj:"Vain pääaspektit",ext:
 aspT:"Aspektitaulukko",aspN:"Vihreä = sujuva, punainen = jännite, violetti = hienovarainen, kulta = konjunktio. Napauta tai vie hiiri ruudun päälle nähdäksesi selityksen.",
 dist:"Alkuaineet ja ominaisuudet",distN:"Mukana Aurinko–Pluto sekä, jos kellonaika on tiedossa, nousumerkki ja MC.",dom:"Vallitseva alkuaine",domM:"Vallitseva ominaisuus",
 stars:"Kiinteät tähdet",starsN:"Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Konjunktio = alle 1° päässä planeetasta, pisteestä tai akselista.",sth:["Tähti","Merkki","Aste","Konjunktio"],untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
-intro:"Mitä tarkemmat syntymätiedot ovat, sitä tarkempi kartasta tulee. Kartan voi laskea myös ilman kellonaikaa.",
+intro:"Mitä tarkemmat syntymätiedot ovat, sitä tarkempi kartasta tulee. Kartan voi laskea myös ilman kellonaikaa. Tiedot tallentuvat tähän selaimeen, ja Nollaa-painike poistaa ne.",
 hDate:"Syntymäpäivä määrittää esimerkiksi aurinkomerkkisi eli tutun horoskooppimerkkisi sekä planeettojen sijainnit.",
 hTime:"Kellonaika määrittää esimerkiksi nousumerkkisi ja talojen jaon. Jos et tiedä sitä, valitse ruutu: kartta piirretään silloin ilman nousumerkkiä ja taloja, ja Kuun sijainti on vain suuntaa antava.",
 hMan:"Käytä tätä, jos paikkakuntaasi ei löydy listalta. Koordinaatit löydät esimerkiksi karttapalvelusta.",
-chartHint:"Vie hiiri kartan osan päälle tai napauta sitä (planeetta, merkki, talo, akseli tai viiva), niin näet selityksen.",
+chartHint:"Vie hiiri kartan osan päälle tai napauta sitä (planeetta, merkki, talo, akseli tai viiva), niin näet selityksen. Zoomaa +/−-painikkeilla, kaksoisnapautuksella tai nipistämällä; zoomattua karttaa voi vetää sormella.",
 quickIntro:"Yleisluontoisia, symbolisia tulkintoja. Aurinkomerkki on tuttu horoskooppimerkkisi, Kuu kuvaa tunne-elämääsi ja nousumerkki sitä, miltä näytät ulospäin.",
-close:"Sulje",
+close:"Sulje",zin:"Lähennä",zout:"Loitonna",zreset:"Näytä koko kartta",reset:"Nollaa",resetT:"Palauta oletusarvot ja poista tallennetut tiedot",
 pd:["Perusluonteesi, identiteettisi ja elämänvoimasi: se, kuka olet ja mihin suuntaat. Aurinkomerkki on tuttu horoskooppimerkkisi.",
 "Tunteesi, vaistosi ja turvan tarpeesi: se, mikä saa olosi kotoisaksi ja miten reagoit tunteellisesti.",
 "Ajattelutapasi, puhetapasi ja tapasi oppia ja viestiä.",
@@ -681,13 +707,13 @@ aspm:"Aspects",aspAll:"Major and minor aspects",aspMaj:"Major aspects only",ext:
 aspT:"Aspect grid",aspN:"Green = flowing, red = tension, violet = subtle, gold = conjunction. Tap or hover a cell for an explanation.",
 dist:"Elements and modalities",distN:"Includes Sun to Pluto and, if the birth time is known, the ascendant and MC.",dom:"Dominant element",domM:"Dominant modality",
 stars:"Fixed stars",starsN:"Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Conjunct = within 1° of a planet, point or axis.",sth:["Star","Sign","Degree","Conjunct"],untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
-intro:"The more precise your birth details are, the more precise the chart will be. A chart can also be made without the time of birth.",
+intro:"The more precise your birth details are, the more precise the chart will be. A chart can also be made without the time of birth. Your details are saved in this browser, and the Reset button clears them.",
 hDate:"The date of birth determines, for example, your Sun sign (the zodiac sign you already know) and the positions of the planets.",
 hTime:"The time of birth determines, for example, your rising sign and the division of the houses. If you don’t know it, tick the box: the chart is then drawn without the ascendant and houses, and the Moon’s position is only approximate.",
 hMan:"Use this if your place is not on the list. You can find coordinates in any map service.",
-chartHint:"Hover over a part of the chart or tap it (planet, sign, house, axis or line) to see an explanation.",
+chartHint:"Hover over a part of the chart or tap it (planet, sign, house, axis or line) to see an explanation. Zoom with the +/− buttons, a double-tap or a pinch; drag a zoomed chart to move it.",
 quickIntro:"General, symbolic readings. The Sun sign is the zodiac sign you know, the Moon describes your emotional life and the ascendant how you appear to others.",
-close:"Close",
+close:"Close",zin:"Zoom in",zout:"Zoom out",zreset:"Show the whole chart",reset:"Reset",resetT:"Restore defaults and clear the saved details",
 pd:["Your core self, identity and vitality: who you are and where you are heading. The Sun sign is the zodiac sign you know.",
 "Your emotions, instincts and need for safety: what makes you feel at home and how you react emotionally.",
 "How you think, speak, learn and communicate.",
@@ -723,7 +749,13 @@ M:"The highest point of the chart. Describes career, goals and public role.",
 I:"The lowest point of the chart. Describes home, roots and your private inner life."}}};
 
 // Language preference is stored under the existing, explicitly requested key.
-let lang="en";try{const s=localStorage.getItem("birthchart_store");if(s==="en"||s==="fi")lang=s}catch(e){}
+// Everything lives under the one existing key "birthchart_store" as JSON: {lang, d, tm, unk, cc, place, man, la, lo, tz}.
+// Older versions stored just "fi" or "en" there; that is still read.
+const STORE_KEY="birthchart_store";
+let store={};
+try{const s=localStorage.getItem(STORE_KEY);if(s==="en"||s==="fi")store={lang:s};else if(s){const o=JSON.parse(s);if(o&&typeof o==="object"&&!Array.isArray(o))store=o}}catch(e){store={}}
+function saveStore(){try{localStorage.setItem(STORE_KEY,JSON.stringify(store))}catch(e){}}
+let lang=store.lang==="fi"?"fi":"en";
 const $=id=>document.getElementById(id),t=k=>L[lang][k];
 
 const R=Math.PI/180,nm=x=>((x%360)+360)%360;
@@ -1204,7 +1236,11 @@ function render(){
   h2.textContent = res.place.n + " · " + $("d").value.split("-").reverse().join(".") + (res.known ? " " + $("tm").value : "");
   box.appendChild(h2);
   
+  const zb = document.createElement("div"); zb.className = "zbar";
+  zb.innerHTML = `<button type="button" aria-label="${T.zout}" title="${T.zout}">−</button><button type="button" aria-label="${T.zin}" title="${T.zin}">+</button><button type="button" aria-label="${T.zreset}" title="${T.zreset}">↺</button>`;
+  box.appendChild(zb);
   const ch = document.createElement("div"); ch.className = "chart"; svgEl = draw(res); ch.appendChild(svgEl); box.appendChild(ch);
+  initZoom(ch, svgEl, zb);
   const hp = document.createElement("p"); hp.className = "help chart-hint"; hp.textContent = T.chartHint; box.appendChild(hp);
   const act = document.createElement("div"); act.className = "act"; act.innerHTML = `<button type="button" id="b1">${T.svg}</button><button type="button" id="b2">${T.png}</button>`; box.appendChild(act);
   
@@ -1325,8 +1361,132 @@ document.addEventListener("keydown", e => {
 });
 window.addEventListener("scroll", () => { if(innerWidth > 700) hideTip(); }, {passive: true});
 
+/* ---------- Saved birth details (same localStorage key as the language) ---------- */
+function saveBirth(){
+  store.d = $("d").value; store.tm = $("tm").value; store.unk = $("unk").checked; store.man = $("man").checked;
+  if(store.man){ store.la = $("la").value; store.lo = $("lo").value; store.tz = $("tz").value; delete store.cc; delete store.place; }
+  else if(cur){ store.cc = cs.value; store.place = cur.n; delete store.la; delete store.lo; delete store.tz; }
+  saveStore();
+}
+function restoreBirth(){
+  const s = store;
+  if(typeof s.d !== "string" || !/^\d{4}-\d\d-\d\d$/.test(s.d)) return;
+  $("d").value = s.d;
+  if(typeof s.tm === "string" && /^\d\d:\d\d$/.test(s.tm)) $("tm").value = s.tm;
+  $("unk").checked = !!s.unk; $("tm").disabled = !!s.unk;
+  let tzOk = false;
+  if(s.man){ try{ new Intl.DateTimeFormat("en", {timeZone: s.tz}); tzOk = true; }catch(e){} }
+  if(s.man && tzOk){
+    $("man").checked = true; $("mb").style.display = "grid"; pi.disabled = cs.disabled = true;
+    $("la").value = s.la; $("lo").value = s.lo; $("tz").value = s.tz;
+  } else {
+    const co = DB.find(c => c.cc === s.cc), c = co && co.cs.find(x => x.n === s.place);
+    if(c){ cs.value = co.cc; cur = c; pi.value = c.n; $("tz").value = co.cs[0].tz; }
+  }
+}
+$("rs").addEventListener("click", () => {
+  ["d", "tm", "unk", "cc", "place", "man", "la", "lo", "tz"].forEach(k => delete store[k]);
+  saveStore();
+  $("d").value = "2000-01-01"; $("tm").value = "12:00"; $("unk").checked = false; $("tm").disabled = false;
+  $("man").checked = false; $("mb").style.display = "none"; pi.disabled = cs.disabled = false;
+  $("la").value = "60.17"; $("lo").value = "24.94"; $("tz").value = "Europe/Helsinki";
+  cs.value = "FI"; cur = {n:"Helsinki", lat:60.17, lon:24.94, tz:"Europe/Helsinki"}; pi.value = "Helsinki"; sg.hidden = true;
+  $("er").textContent = ""; Z.s = 1; Z.cx = Z.cy = 400;
+  const r = calc(); if(r){ window.RES = r; render(); }
+});
+
+/* ---------- Chart zoom: buttons, double-tap/click, pinch, drag to pan, Ctrl+wheel ---------- */
+const ZF = {x:-30, y:-30, w:860}, ZMAX = 6;
+const Z = {s:1, cx:400, cy:400};   // scale and view centre; kept across re-renders
+function initZoom(ch, svg, bar){
+  const btn = bar.querySelectorAll("button"), ptrs = new Map();
+  let drag = null, pinch = null, lastTap = null, skipUntil = 0;
+  const apply = () => {
+    Z.s = Math.min(ZMAX, Math.max(1, Z.s));
+    const w = ZF.w / Z.s, lo = ZF.x + w / 2, hi = ZF.x + ZF.w - w / 2;
+    Z.cx = Math.min(hi, Math.max(lo, Z.cx)); Z.cy = Math.min(hi, Math.max(lo, Z.cy));
+    svg.setAttribute("viewBox", (Z.cx - w / 2) + " " + (Z.cy - w / 2) + " " + w + " " + w);
+    const on = Z.s > 1.001;
+    ch.classList.toggle("zoomed", on);
+    btn[0].disabled = btn[2].disabled = !on;
+    btn[1].disabled = Z.s >= ZMAX - 0.001;
+  };
+  // Zoom to scale s keeping the chart point under screen position (px, py) in place.
+  const zoomAt = (px, py, s) => {
+    const r = svg.getBoundingClientRect(), fx = (px - r.left) / r.width, fy = (py - r.top) / r.height;
+    const w0 = ZF.w / Z.s, x0 = Z.cx - w0 / 2 + fx * w0, y0 = Z.cy - w0 / 2 + fy * w0;
+    Z.s = s < 1.05 ? 1 : Math.min(ZMAX, s);
+    const w1 = ZF.w / Z.s;
+    Z.cx = x0 - fx * w1 + w1 / 2; Z.cy = y0 - fy * w1 + w1 / 2;
+    hideTip(); apply();
+  };
+  const mid = () => { const r = svg.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  btn[0].onclick = () => zoomAt(...mid(), Z.s / 1.5);
+  btn[1].onclick = () => zoomAt(...mid(), Z.s * 1.5);
+  btn[2].onclick = () => { Z.s = 1; Z.cx = Z.cy = 400; hideTip(); apply(); };
+
+  ch.addEventListener("pointerdown", e => {
+    ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(ptrs.size === 1) drag = {x:e.clientX, y:e.clientY, t:performance.now(), moved:false, cap:false, id:e.pointerId};
+    else if(ptrs.size === 2){
+      if(drag) drag.moved = true;
+      const [a, b] = [...ptrs.values()];
+      pinch = {d:Math.hypot(a.x - b.x, a.y - b.y) || 1, s:Z.s, mx:(a.x + b.x) / 2, my:(a.y + b.y) / 2};
+    }
+  });
+  ch.addEventListener("pointermove", e => {
+    const p = ptrs.get(e.pointerId); if(!p) return;
+    const ox = p.x, oy = p.y; p.x = e.clientX; p.y = e.clientY;
+    if(ptrs.size >= 2 && pinch){
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const r = svg.getBoundingClientRect(), w = ZF.w / Z.s;
+      Z.cx -= (mx - pinch.mx) * w / r.width; Z.cy -= (my - pinch.my) * w / r.height;
+      pinch.mx = mx; pinch.my = my;
+      zoomAt(mx, my, pinch.s * d / pinch.d);
+      return;
+    }
+    if(!drag || e.pointerId !== drag.id) return;
+    if(!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.moved = true;
+    if(Z.s > 1.001){
+      if(!drag.cap){ try{ ch.setPointerCapture(e.pointerId); }catch(_){} drag.cap = true; hideTip(); }
+      const r = svg.getBoundingClientRect(), w = ZF.w / Z.s;
+      Z.cx -= (e.clientX - ox) * w / r.width; Z.cy -= (e.clientY - oy) * w / r.height;
+      apply();
+    }
+  });
+  const end = e => {
+    if(!ptrs.delete(e.pointerId)) return;
+    if(ptrs.size < 2) pinch = null;
+    if(e.type === "pointercancel"){ drag = null; return; }
+    if(drag && e.pointerId === drag.id){
+      const d = drag, now = performance.now(); drag = null;
+      if(d.cap){ skipUntil = now + 400; return; }
+      if(!d.moved && now - d.t < 500){
+        if(lastTap && now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30){
+          lastTap = null; skipUntil = now + 400;
+          zoomAt(e.clientX, e.clientY, Z.s > 1.001 ? 1 : 2.5);   // double-tap / double-click toggles zoom
+        } else lastTap = {t:now, x:e.clientX, y:e.clientY};
+      }
+    }
+    if(!drag && ptrs.size === 1){   // one finger left after a pinch: keep panning with it
+      const [id, p] = [...ptrs.entries()][0];
+      drag = {x:p.x, y:p.y, t:performance.now(), moved:true, cap:false, id};
+    }
+  };
+  ch.addEventListener("pointerup", end);
+  ch.addEventListener("pointercancel", end);
+  // Swallow the click that follows a drag or a double-tap so it does not also open a tooltip.
+  ch.addEventListener("click", e => { if(performance.now() < skipUntil){ e.stopPropagation(); e.preventDefault(); } }, true);
+  ch.addEventListener("wheel", e => {
+    if(!e.ctrlKey) return;
+    e.preventDefault(); zoomAt(e.clientX, e.clientY, Z.s * Math.exp(-e.deltaY * 0.01));
+  }, {passive:false});
+  apply();
+}
+
 function save(png){
-  const x = svgEl.cloneNode(true); x.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const x = svgEl.cloneNode(true); x.setAttribute("xmlns", "http://www.w3.org/2000/svg"); x.setAttribute("viewBox", "-30 -30 860 860");
   x.querySelectorAll(".hit").forEach(e => e.remove());
   x.querySelectorAll("[data-tip]").forEach(e => ["data-tip", "tabindex", "role", "aria-label"].forEach(a => e.removeAttribute(a)));
   x.querySelectorAll(".sym").forEach(e => e.setAttribute("font-family", "Segoe UI Symbol,Noto Sans Symbols 2,Apple Symbols,DejaVu Sans,serif"));
@@ -1344,11 +1504,13 @@ function save(png){
 }
 
 $("f").addEventListener("submit", e => {
+  Z.s = 1; Z.cx = Z.cy = 400;
   e.preventDefault();
   const r = calc();
   if(!r) return;
   window.RES = r;
   render();
+  saveBirth();
   // Move the newly calculated chart into view instead of leaving the user at the form.
   requestAnimationFrame(() => $("res").scrollIntoView({behavior:"smooth", block:"start"}));
 });
@@ -1364,10 +1526,11 @@ function apply(){
     ? '<a href="https://github.com/Millaceedee/" target="_blank" rel="noopener noreferrer" style="color:inherit">Millaceedee</a> © 2026. Lisensoitu MIT-lisenssillä. Tähtitieteelliset laskelmat: <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener noreferrer" style="color:inherit">Astronomy Engine</a>, Don Cross.'
     : '<a href="https://github.com/Millaceedee/" target="_blank" rel="noopener noreferrer" style="color:inherit">Millaceedee</a> © 2026. Licensed under the MIT License. Astronomical calculations: <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener noreferrer" style="color:inherit">Astronomy Engine</a> by Don Cross.';
   document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
+  $("rs").title = t("resetT");
   fillCountries(); if(cur) pi.value = cur.n;
 }
-$("lb").onclick = () => { lang = lang === "fi" ? "en" : "fi"; try{ localStorage.setItem("birthchart_store", lang); }catch(e){} apply(); if(window.RES) render(); };
-fillCountries(); cs.value = "FI"; apply();
+$("lb").onclick = () => { lang = lang === "fi" ? "en" : "fi"; store.lang = lang; saveStore(); apply(); if(window.RES) render(); };
+fillCountries(); cs.value = "FI"; apply(); restoreBirth();
 
 window.addEventListener("DOMContentLoaded", () => {
   const r = calc();
