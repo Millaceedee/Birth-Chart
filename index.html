@@ -83,6 +83,28 @@ th{font-weight:400;color:var(--dim);font-style:italic}
 .act{display:flex;gap:10px;flex-wrap:wrap}.act button{background:none;border:1px solid var(--lav);color:var(--lav);padding:7px 16px;border-radius:2px;cursor:pointer}
 .act button:hover{background:var(--plum2)}
 .note{font-size:13px;color:var(--dim);max-width:70ch}
+
+.help{font-size:13px;color:var(--dim);line-height:1.45;margin-top:-7px}
+.chart svg text,.chart svg line,.chart svg circle,.chart svg path{pointer-events:none}
+.chart svg [data-tip]{pointer-events:all;cursor:pointer}
+.chart svg [data-tip]:focus{outline:none}
+.chart svg [data-tip]:focus-visible{outline:2px solid var(--rose);outline-offset:3px}
+.chart svg line.hit:hover{stroke:#e0b86638}
+.chart svg path.hit:hover{fill:#e0b86618}
+.chart svg path[data-tip]:not(.hit):hover{filter:brightness(1.7)}
+.chart svg circle[data-tip]:hover{fill:#2d1a4d}
+.chart-hint{text-align:center;margin-top:-8px}
+#tip{position:fixed;z-index:50;left:0;top:0;width:max-content;max-width:330px;background:#120a1e;border:1px solid var(--rose);border-radius:12px 2px 12px 2px;padding:12px 16px 12px;box-shadow:0 10px 34px #000b;font-size:14px;line-height:1.5;display:none;pointer-events:none}
+#tip.on{display:block}
+#tip.pin{pointer-events:auto;padding-right:34px}
+#tip h3{font-weight:400;font-size:18px;color:var(--lav);line-height:1.3}
+#tip .sub{color:var(--amber);font-size:13px;margin:1px 0 6px}
+#tip p{margin-top:5px}
+#tip p.dim{color:var(--dim);font-size:12.5px}
+#tip .x{position:absolute;top:2px;right:4px;background:none;border:0;color:var(--dim);font-size:24px;line-height:1;padding:6px 9px;cursor:pointer;display:none}
+#tip.pin .x{display:block}
+#tip .x:hover{color:var(--bone)}
+@media(max-width:700px){#tip{left:10px!important;right:10px;bottom:10px;top:auto!important;width:auto;max-width:none;max-height:55dvh;overflow:auto}}
 </style>
 </head>
 <body>
@@ -93,13 +115,17 @@ th{font-weight:400;color:var(--dim);font-style:italic}
 <main>
 <form id="f" autocomplete="off" novalidate>
 <h2 data-t="your"></h2>
+<p class="help" data-t="intro"></p>
 <label><span data-t="date"></span><input type="date" id="d" required min="1800-01-01" max="2099-12-31" value="2000-01-01"></label>
+<p class="help" data-t="hDate"></p>
 <label><span data-t="time"></span><input type="time" id="tm" value="12:00"></label>
 <label class="chk"><input type="checkbox" id="unk"><span data-t="unk"></span></label>
+<p class="help" data-t="hTime"></p>
 <label><span data-t="country"></span><select id="c"></select></label>
 <div class="pw"><label><span data-t="place"></span><input type="text" id="p" role="combobox" aria-autocomplete="list" aria-controls="sug" value="Helsinki"></label><ul id="sug" hidden></ul></div>
-<p class="hint" data-t="hint"></p>
+<p class="help" data-t="hint"></p>
 <label class="chk"><input type="checkbox" id="man"><span data-t="man"></span></label>
+<p class="help" data-t="hMan"></p>
 <div id="mb" hidden style="display:none;gap:10px">
 <div class="row"><label>lat<input id="la" inputmode="decimal" value="60.17"></label><label>lon<input id="lo" inputmode="decimal" value="24.94"></label></div>
 <label><span data-t="tz"></span><input id="tz" value="Europe/Helsinki"></label>
@@ -109,6 +135,7 @@ th{font-weight:400;color:var(--dim);font-style:italic}
 </form>
 <section class="res" id="res" aria-live="polite"><div class="empty" data-t="empty"></div></section>
 </main>
+<div id="tip" role="tooltip"></div>
 <footer id="credit" class="note" style="max-width:1180px;margin:28px auto 0;text-align:center">Millaceedee <a href="https://github.com/Millaceedee/" target="_blank" rel="noopener noreferrer" style="color:inherit">© 2026</a>. Licensed under the MIT License.</footer>
 <script>
 /*
@@ -494,24 +521,96 @@ AE|Asia/Dubai|Arabiemiraatit|United Arab Emirates|Dubai,25.20,55.27`.split("\n")
 const SIGN=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map(s=>s+"\uFE0E");
 const PG=["☉","☽","☿","♀","♂","♃","♄","♅","♆","♇","☊"].map(s=>s+"\uFE0E");
 const L={fi:{
-sub:"Astrologinen kartta syntymähetkesi taivaasta – tutustu planeettojen sijainteihin ja niiden symbolisiin tulkintoihin.",your:"Tietosi",date:"Syntymäpäivä",time:"Syntymäaika",unk:"En tiedä tarkkaa kellonaikaa",country:"Syntymämaa",place:"Syntymäpaikka",
-hint:"Kirjoita paikkakunnan alkua ja valitse se avautuvalta listalta.",man:"Syötä koordinaatit itse",tz:"Aikavyöhyke (IANA)",go:"Laske kartta",
+sub:"Astrologinen kartta syntymähetkesi taivaasta – tutustu planeettojen sijainteihin ja niiden symbolisiin tulkintoihin.",your:"Tietosi",date:"Syntymäpäivä",time:"Syntymän kellonaika",unk:"En tiedä tarkkaa kellonaikaa",country:"Syntymämaa",place:"Syntymäpaikka",
+hint:"Syntymäpaikka määrittää, miltä taivas näytti juuri siellä syntymähetkelläsi. Kirjoita paikkakunnan alkua ja valitse se avautuvalta listalta.",man:"Syötä koordinaatit itse",tz:"Aikavyöhyke (IANA)",go:"Laske kartta",
 empty:"Täytä tietosi vasemmalta ja valitse paikka listasta, niin kartta piirtyy tähän.",pick:"Valitse paikkakunta listalta.",baddate:"Syötä syntymäpäivä.",badco:"Tarkista koordinaatit ja aikavyöhyke.",
 sign:["Oinas","Härkä","Kaksoset","Rapu","Leijona","Neitsyt","Vaaka","Skorpioni","Jousimies","Kauris","Vesimies","Kalat"],
 kw:["rohkea ja välitön","vakaa ja aistillinen","utelias ja vaihteleva","suojaava ja tunteellinen","loistava ja antelias","tarkka ja käytännöllinen","tasapainoa ja kumppanuutta etsivä","syvä ja intensiivinen","vapautta ja merkitystä etsivä","kurinalainen ja kunnianhimoinen","omaperäinen ja riippumaton","herkkä ja mielikuvituksellinen"],
-body:["Aurinko","Kuu","Merkurius","Venus","Mars","Jupiter","Saturnus","Uranus","Neptunus","Pluto","Pohjoinen solmu"],asc:"Nousumerkki",mc:"Taivaanlaki (MC)",
+body:["Aurinko","Kuu","Merkurius","Venus","Mars","Jupiter","Saturnus","Uranus","Neptunus","Pluto","Pohjoinen solmu"],asc:"Nousumerkki",mc:"Keskitaivas (MC)",
 mean:["Perusluonne ja elämänvoima","Tunteet ja turvan tarve","Ajattelu ja puhetapa","Rakkaus ja arvot","Tahto ja toimintatapa"],ascm:"Ulospäin näkyvä olemus",
 th:["Kohde","Merkki","Aste","Talo"],house:"Talo",asp:"Aspektit",quick:"Pikatulkinnat",full:"Kaikki sijainnit",svg:"Tallenna SVG",png:"Tallenna PNG",
-note:"Laskenta: astronomy-engine (tarkkuus alle 1 kaariminuutti), Placidus-talot, todellinen solmu.",untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen"},
+note:"Laskenta: astronomy-engine (tarkkuus alle 1 kaariminuutti), Placidus-talot, todellinen solmu.",untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
+intro:"Mitä tarkemmat syntymätiedot ovat, sitä tarkempi kartasta tulee. Kartan voi laskea myös ilman kellonaikaa.",
+hDate:"Syntymäpäivä määrittää esimerkiksi aurinkomerkkisi eli tutun horoskooppimerkkisi sekä planeettojen sijainnit.",
+hTime:"Kellonaika määrittää esimerkiksi nousumerkkisi ja talojen jaon. Jos et tiedä sitä, valitse ruutu: kartta piirretään silloin ilman nousumerkkiä ja taloja, ja Kuun sijainti on vain suuntaa antava.",
+hMan:"Käytä tätä, jos paikkakuntaasi ei löydy listalta. Koordinaatit löydät esimerkiksi karttapalvelusta.",
+chartHint:"Vie hiiri kartan osan päälle tai napauta sitä (planeetta, merkki, talo, akseli tai viiva), niin näet selityksen.",
+quickIntro:"Yleisluontoisia, symbolisia tulkintoja. Aurinkomerkki on tuttu horoskooppimerkkisi, Kuu kuvaa tunne-elämääsi ja nousumerkki sitä, miltä näytät ulospäin.",
+close:"Sulje",
+pd:["Perusluonteesi, identiteettisi ja elämänvoimasi: se, kuka olet ja mihin suuntaat. Aurinkomerkki on tuttu horoskooppimerkkisi.",
+"Tunteesi, vaistosi ja turvan tarpeesi: se, mikä saa olosi kotoisaksi ja miten reagoit tunteellisesti.",
+"Ajattelutapasi, puhetapasi ja tapasi oppia ja viestiä.",
+"Rakkaus, kauneus ja arvot: mistä nautit ja millaisia suhteita haet.",
+"Tahto, rohkeus ja toimintatapa: miten ajat asioita ja käytät energiaasi.",
+"Kasvu, onni ja merkityksen etsintä: missä uskallat laajentaa ja luottaa.",
+"Vastuu, rajat ja kypsyminen: missä tarvitset kärsivällisyyttä ja kurinalaisuutta.",
+"Vapaus, uudistus ja yllätykset: missä rikot totuttua ja olet omaperäinen.",
+"Unelmat, intuitio ja mielikuvitus: missä haaveilet, eläydyt tai asiat sumenevat.",
+"Syvä muutos ja voima: missä vanha päättyy ja uutta syntyy.",
+"Kuun kiertoradan nouseva solmu. Symbolisesti suunta, johon kasvat: vieras alue, joka vaatii opettelua."],
+slow:"Hidas planeetta: se viipyy samassa merkissä vuosia, joten merkki on yhteinen koko ikäluokallesi. Henkilökohtaisemmin kertoo talo.",
+moonN:"Kellonaika ei ole tiedossa, joten Kuun sijainti on vain suuntaa antava: Kuu liikkuu päivässä yli 12 astetta.",
+ins:"Merkissä",typ:"Tyypillisesti:",retro:"taaksepäinen",
+hn:n=>n+". talo",
+hs:["Minä, ulkoinen olemus ja tapa aloittaa asioita.","Raha, omaisuus, omat voimavarat ja arvot.","Viestintä, lähipiiri, sisarukset ja oppiminen.","Koti, perhe, juuret ja yksityinen sisin.","Luovuus, rakkaus, leikki ja itseilmaisu.","Arki, työ, rutiinit ja hyvinvointi.","Parisuhteet, kumppanuudet ja läheiset vuorovaikutussuhteet.","Yhteiset resurssit, intiimi side ja syvät muutokset.","Matkat, opiskelu, uskomukset ja maailmankatsomus.","Ura, tavoitteet ja julkinen rooli.","Ystävät, yhteisöt, toiveet ja tulevaisuuden unelmat.","Piilotettu puoli, lepo, alitajunta ja irti päästäminen."],
+starts:"Alkaa merkistä",here:"Kartassasi tässä merkissä:",hereH:"Kartassasi tässä talossa:",none:"ei yhtään planeettaa",
+el:["Tuli","Maa","Ilma","Vesi"],
+eld:["Tulimerkki: intoa, rohkeutta ja toimintaa.","Maamerkki: käytännöllisyyttä, pysyvyyttä ja aistillisuutta.","Ilmamerkki: ajattelua, puhetta ja vuorovaikutusta.","Vesimerkki: tunteita, herkkyyttä ja vaistoa."],
+mo:["Aloittava","Vakaa","Muuttuva"],
+mod:["Aloittava (kardinaali) merkki tarttuu uuteen ja käynnistää asioita.","Vakaa (kiinteä) merkki pitää kiinni ja vie asiat loppuun.","Muuttuva merkki mukautuu ja vaihtaa suuntaa joustavasti."],
+an:["Sekstiili","Neliö","Trigoni","Oppositio"],
+ad:["Sujuva ja tukeva yhteys: kaksi puolta sinussa tekee luontevasti yhteistyötä, kun siihen tarttuu. Vihreä viiva.","Jännite, joka haastaa toimimaan: kaksi puolta vetää eri suuntiin, ja ristiriita ajaa usein kehittymään. Punainen viiva.","Helppo ja luonteva yhteys: voimavara, joka toimii melkein itsestään. Vihreä viiva.","Vastakkainasettelu: kaksi puolta on vastapäätä toisiaan, ja haasteena on löytää niiden välille tasapaino. Punainen viiva."],
+orbL:"Poikkeama tarkasta kulmasta",
+axn:{A:"Nousumerkki (ASC)",D:"Laskeva merkki (DSC)",M:"Keskitaivas (MC)",I:"Pohjataivas (IC)"},
+axd:{A:"Merkki, joka nousi itähorisontista syntymähetkelläsi. Kuvaa ulospäin näkyvää olemustasi ja ensivaikutelmaa. Kartan vasen reuna ja 1. talon alku.",
+D:"Vastapäätä nousumerkkiä, 7. talon alku. Kuvaa sitä, mitä etsit toisista ihmisistä ja kumppanuuksista.",
+M:"Kartan korkein kohta ja 10. talon alku. Kuvaa uraa, tavoitteita ja julkista roolia.",
+I:"Kartan alin kohta ja 4. talon alku. Kuvaa kotia, juuria ja yksityistä sisintä."}},
 en:{sub:"An astrological map of the sky at your birth, exploring planetary positions and their symbolic meanings.",your:"Your details",date:"Date of birth",time:"Time of birth",unk:"I don’t know the exact time",country:"Country of birth",place:"Place of birth",
-hint:"Type the first letters of the place and choose it from the list.",man:"Enter coordinates myself",tz:"Time zone (IANA)",go:"Cast the chart",
+hint:"The place of birth determines what the sky looked like from exactly there at the moment you were born. Type the first letters of the place and choose it from the list.",man:"Enter coordinates myself",tz:"Time zone (IANA)",go:"Cast the chart",
 empty:"Fill in your details and choose a place from the list to draw the chart.",pick:"Choose the place from the list.",baddate:"Enter a date of birth.",badco:"Check the coordinates and time zone.",
 sign:["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"],
 kw:["bold and direct","steady and sensual","curious and changeable","protective and feeling","radiant and generous","precise and practical","seeking balance and partnership","deep and intense","seeking freedom and meaning","disciplined and ambitious","original and independent","sensitive and imaginative"],
 body:["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","North Node"],asc:"Ascendant",mc:"Midheaven (MC)",
 mean:["Core self and vitality","Emotions and need for safety","Thinking and speech","Love and values","Will and drive"],ascm:"The face you show the world",
 th:["Body","Sign","Degree","House"],house:"House",asp:"Aspects",quick:"Quick readings",full:"All positions",svg:"Save SVG",png:"Save PNG",
-note:"Calculated with astronomy-engine (sub-arcminute accuracy), Placidus houses, true node.",untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde"}};
+note:"Calculated with astronomy-engine (sub-arcminute accuracy), Placidus houses, true node.",untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
+intro:"The more precise your birth details are, the more precise the chart will be. A chart can also be made without the time of birth.",
+hDate:"The date of birth determines, for example, your Sun sign (the zodiac sign you already know) and the positions of the planets.",
+hTime:"The time of birth determines, for example, your rising sign and the division of the houses. If you don’t know it, tick the box: the chart is then drawn without the ascendant and houses, and the Moon’s position is only approximate.",
+hMan:"Use this if your place is not on the list. You can find coordinates in any map service.",
+chartHint:"Hover over a part of the chart or tap it (planet, sign, house, axis or line) to see an explanation.",
+quickIntro:"General, symbolic readings. The Sun sign is the zodiac sign you know, the Moon describes your emotional life and the ascendant how you appear to others.",
+close:"Close",
+pd:["Your core self, identity and vitality: who you are and where you are heading. The Sun sign is the zodiac sign you know.",
+"Your emotions, instincts and need for safety: what makes you feel at home and how you react emotionally.",
+"How you think, speak, learn and communicate.",
+"Love, beauty and values: what you enjoy and what kind of relationships you seek.",
+"Will, courage and drive: how you pursue things and use your energy.",
+"Growth, luck and the search for meaning: where you dare to expand and trust.",
+"Responsibility, limits and maturing: where you need patience and discipline.",
+"Freedom, reform and surprises: where you break the routine and are original.",
+"Dreams, intuition and imagination: where you dream, empathize or things blur.",
+"Deep change and power: where the old ends and something new is born.",
+"The rising node of the Moon’s orbit. Symbolically the direction you grow toward: unfamiliar ground that takes practice."],
+slow:"A slow planet: it stays in one sign for years, so the sign is shared by your whole generation. The house says more about you personally.",
+moonN:"The time of birth is unknown, so the Moon’s position is only approximate: the Moon moves over 12 degrees a day.",
+ins:"In",typ:"Typically:",retro:"retrograde",
+hn:n=>"House "+n,
+hs:["The self, outward appearance and how you start things.","Money, possessions, your own resources and values.","Communication, your surroundings, siblings and learning.","Home, family, roots and your private inner life.","Creativity, romance, play and self-expression.","Daily life, work, routines and well-being.","Partnerships and close one-to-one relationships.","Shared resources, intimate bonds and deep change.","Travel, study, beliefs and worldview.","Career, goals and public role.","Friends, communities, hopes and dreams for the future.","The hidden side, rest, the subconscious and letting go."],
+starts:"Begins in",here:"In your chart, in this sign:",hereH:"In your chart, in this house:",none:"no planets",
+el:["Fire","Earth","Air","Water"],
+eld:["Fire sign: enthusiasm, courage and action.","Earth sign: practicality, stability and sensuality.","Air sign: thinking, speech and interaction.","Water sign: feelings, sensitivity and instinct."],
+mo:["Cardinal","Fixed","Mutable"],
+mod:["A cardinal sign seizes the new and gets things started.","A fixed sign holds on and sees things through.","A mutable sign adapts and changes direction flexibly."],
+an:["Sextile","Square","Trine","Opposition"],
+ad:["A smooth, supportive link: two sides of you cooperate naturally when you act on it. Green line.","Tension that challenges you to act: two sides pull in different directions, and the conflict often drives growth. Red line.","An easy, natural link: a resource that works almost by itself. Green line.","A face-off: two sides stand opposite each other, and the challenge is to find balance between them. Red line."],
+orbL:"Distance from the exact angle",
+axn:{A:"Ascendant (ASC)",D:"Descendant (DSC)",M:"Midheaven (MC)",I:"Imum Coeli (IC)"},
+axd:{A:"The sign that was rising on the eastern horizon at your birth. Describes how you appear and your first impression. The left edge of the chart and the start of the 1st house.",
+D:"Opposite the ascendant, the start of the 7th house. Describes what you look for in other people and partnerships.",
+M:"The highest point of the chart and the start of the 10th house. Describes career, goals and public role.",
+I:"The lowest point of the chart and the start of the 4th house. Describes home, roots and your private inner life."}}};
 
 // Language preference is stored under the existing, explicitly requested key.
 let lang="en";try{const s=localStorage.getItem("birthchart_store");if(s==="en"||s==="fi")lang=s}catch(e){}
@@ -583,7 +682,7 @@ const deg = x => { let tm = Math.floor((x % 30) * 60 + .5); if(tm >= 1800) tm = 
 function draw(res){
   const c = 400, g = el("svg", {
     viewBox: "-30 -30 860 860",
-    role: "img",
+    role: "group",
     "aria-label": t("quick")
   });
 
@@ -621,7 +720,9 @@ function draw(res){
 
   // Zodiac sectors and sign labels.
   for(let i = 0; i < 12; i++){
-    g.appendChild(arc(i * 30, i * 30 + 30, RS, RO, elFill[i % 4]));
+    const sec = arc(i * 30, i * 30 + 30, RS, RO, elFill[i % 4]);
+    sec.setAttribute("data-tip", "s|" + i);
+    g.appendChild(sec);
     const p = P(i * 30 + 15, 360);
     g.appendChild(el("text", {
       x: p[0], y: p[1],
@@ -653,6 +754,17 @@ function draw(res){
   if(res.known){
     const cu = res.h.c;
 
+    // Invisible house sectors that carry the explanations.
+    for(let i = 0; i < 12; i++){
+      let a = cu[i], b = cu[(i + 1) % 12];
+      if(b < a) b += 360;
+      const hs = arc(a, b, RI, RS, "transparent");
+      hs.setAttribute("stroke", "none");
+      hs.setAttribute("class", "hit");
+      hs.setAttribute("data-tip", "h|" + (i + 1));
+      g.appendChild(hs);
+    }
+
     g.appendChild(el("circle", {
       cx: c, cy: c, r: RH, fill: "none",
       stroke: "#6a4f9a", "stroke-width": 1.2
@@ -680,14 +792,18 @@ function draw(res){
       }, i + 1));
     }
 
-    const ax = (l, lab) => {
+    const ax = (l, lab, key) => {
       g.appendChild(line(l, RI, l, RO, {
         stroke: "#e0b866", "stroke-width": 2.4
+      }));
+      g.appendChild(line(l, RI, l, RO, {
+        stroke: "transparent", "stroke-width": 16, class: "hit", "data-tip": "x|" + key
       }));
       const p = P(l, RO + 2);
       g.appendChild(el("circle", {
         cx: p[0], cy: p[1], r: 17,
-        fill: "#1d1233", stroke: "#e0b866"
+        fill: "#1d1233", stroke: "#e0b866",
+        "data-tip": "x|" + key, tabindex: 0, role: "button", "aria-label": L[lang].axn[key]
       }));
       g.appendChild(el("text", {
         x: p[0], y: p[1],
@@ -698,10 +814,10 @@ function draw(res){
       }, lab));
     };
 
-    ax(res.h.asc, "ASC");
-    ax(res.h.asc + 180, "DSC");
-    ax(res.h.mc, "MC");
-    ax(res.h.mc + 180, "IC");
+    ax(res.h.asc, "ASC", "A");
+    ax(res.h.asc + 180, "DSC", "D");
+    ax(res.h.mc, "MC", "M");
+    ax(res.h.mc + 180, "IC", "I");
   } else {
     for(let i = 0; i < 12; i++){
       g.appendChild(line(i * 30, RI, i * 30, RS, {
@@ -728,11 +844,17 @@ function draw(res){
       let d = Math.abs(pts[i].l - pts[j].l);
       if(d > 180) d = 360 - d;
 
-      for(const [angle, orb, color] of ASPS){
+      for(let ai = 0; ai < ASPS.length; ai++){
+        const [angle, orb, color] = ASPS[ai];
         if(Math.abs(d - angle) <= orb){
           g.appendChild(line(
             pts[i].l, RI - 1, pts[j].l, RI - 1,
             {stroke: color, "stroke-width": 1.3, opacity: 0.85, class: "asp"}
+          ));
+          g.appendChild(line(
+            pts[i].l, RI - 1, pts[j].l, RI - 1,
+            {stroke: "transparent", "stroke-width": 12, class: "hit",
+             "data-tip": "a|" + pts[i].i + "|" + pts[j].i + "|" + ai + "|" + Math.abs(d - angle).toFixed(1)}
           ));
           break;
         }
@@ -823,6 +945,14 @@ function draw(res){
       "font-size": 11,
       fill: "#9a8bb0"
     }, String(minutes).padStart(2, "0") + "′" + (res.rx[i] ? " ℞" : "")));
+
+    // Wide invisible target so the whole planet label is easy to hit with a finger.
+    const h1 = P(body.labelAngle, 238), h2 = P(body.labelAngle, 322);
+    g.appendChild(el("line", {
+      x1: h1[0], y1: h1[1], x2: h2[0], y2: h2[1],
+      stroke: "transparent", "stroke-width": 30, "stroke-linecap": "round", class: "hit",
+      "data-tip": "p|" + i, tabindex: 0, role: "button", "aria-label": L[lang].body[i]
+    }));
   });
 
   return g;
@@ -878,12 +1008,13 @@ function calc(){
 function render(){
   if(!window.RES) return;
   const res = window.RES, T = L[lang], box = $("res");
-  box.innerHTML = "";
+  box.innerHTML = ""; hideTip();
   const h2 = document.createElement("h2");
   h2.textContent = res.place.n + " · " + $("d").value.split("-").reverse().join(".") + (res.known ? " " + $("tm").value : "");
   box.appendChild(h2);
   
   const ch = document.createElement("div"); ch.className = "chart"; svgEl = draw(res); ch.appendChild(svgEl); box.appendChild(ch);
+  const hp = document.createElement("p"); hp.className = "help chart-hint"; hp.textContent = T.chartHint; box.appendChild(hp);
   const act = document.createElement("div"); act.className = "act"; act.innerHTML = `<button type="button" id="b1">${T.svg}</button><button type="button" id="b2">${T.png}</button>`; box.appendChild(act);
   
   const rows = [];
@@ -891,7 +1022,7 @@ function render(){
   res.lon.forEach((l, i) => rows.push([T.body[i], l, res.known ? houseOf(l, res.h.c) : "", i < 5 ? T.mean[i] : "", i, res.rx[i]]));
   
   const q = document.createElement("div");
-  q.innerHTML = `<h2>${T.quick}</h2><div class="quick"></div>`;
+  q.innerHTML = `<h2>${T.quick}</h2><p class="note" style="margin:2px 0 10px">${T.quickIntro}</p><div class="quick"></div>`;
   const qs = q.lastChild;
   (res.known ? [rows[0]] : []).concat(rows.filter(r => typeof r[4] == "number" && r[4] < 5)).forEach(r => {
     const s = readSign(r[1]), dv = document.createElement("div"); dv.className = "q";
@@ -908,8 +1039,99 @@ function render(){
   $("b1").onclick = () => save(false); $("b2").onclick = () => save(true);
 }
 
+/* ---------- Explanations: hover (mouse), tap/click (pins), focus + Enter (keyboard) ---------- */
+const tipEl = $("tip");
+let pinned = false;
+function tipHTML(key){
+  const res = window.RES; if(!res) return "";
+  const T = L[lang], q = key.split("|"), k = q[0], cu = res.known ? res.h.c : null;
+  const pl = j => `<span class="sym">${PG[j]}</span> ${T.body[j]}`;
+  const sg = l => { const s = readSign(l); return `${T.sign[s]} <span class="sym">${SIGN[s]}</span> ${deg(l)}`; };
+  const head = (ti, su) => `<h3>${ti}</h3>` + (su ? `<div class="sub">${su}</div>` : "");
+  const list = a => a.length ? a.map(pl).join(", ") : T.none;
+  if(k === "p"){
+    const i = +q[1], l = res.lon[i], s = readSign(l);
+    let su = sg(l);
+    if(cu) su += " · " + T.hn(houseOf(l, cu));
+    if(res.rx[i]) su += " · ℞ " + T.retro;
+    let b = `<p>${T.pd[i]}</p>`;
+    if(i >= 7 && i <= 9) b += `<p>${T.slow}</p>`;
+    if(i === 1 && !res.known) b += `<p>${T.moonN}</p>`;
+    b += `<p><b>${T.ins} ${T.sign[s]}:</b> ${T.kw[s]}.</p>`;
+    if(cu){ const h = houseOf(l, cu); b += `<p><b>${T.hn(h)}:</b> ${T.hs[h - 1]}</p>`; }
+    return head(pl(i), su) + b;
+  }
+  if(k === "s"){
+    const i = +q[1], inn = res.lon.map((l, j) => readSign(l) === i ? j : -1).filter(j => j >= 0);
+    return head(`<span class="sym">${SIGN[i]}</span> ${T.sign[i]}`, `${T.el[i % 4]} · ${T.mo[i % 3]}`)
+      + `<p>${T.eld[i % 4]}</p><p>${T.mod[i % 3]}</p><p><b>${T.typ}</b> ${T.kw[i]}.</p><p><b>${T.here}</b> ${list(inn)}</p>`;
+  }
+  if(k === "h" && cu){
+    const n = +q[1], inn = res.lon.map((l, j) => houseOf(l, cu) === n ? j : -1).filter(j => j >= 0);
+    return head(T.hn(n), `${T.starts} ${sg(cu[n - 1])}`) + `<p>${T.hs[n - 1]}</p><p><b>${T.hereH}</b> ${list(inn)}</p>`;
+  }
+  if(k === "x" && res.known){
+    const key2 = q[1], v = {A: res.h.asc, D: nm(res.h.asc + 180), M: res.h.mc, I: nm(res.h.mc + 180)}[key2];
+    return head(T.axn[key2], sg(v)) + `<p>${T.axd[key2]}</p>`;
+  }
+  if(k === "a"){
+    const nameOf = v => v === "A" ? T.asc : v === "M" ? T.mc : pl(+v), ti = +q[3];
+    const orb = lang === "fi" ? q[4].replace(".", ",") : q[4];
+    return head(`${T.an[ti]} (${[60, 90, 120, 180][ti]}°)`, `${nameOf(q[1])} – ${nameOf(q[2])}`)
+      + `<p>${T.ad[ti]}</p><p class="dim">${T.orbL}: ${orb}°</p>`;
+  }
+  return "";
+}
+function placeTip(x, y){
+  tipEl.style.left = "0px"; tipEl.style.top = "0px";
+  const w = tipEl.offsetWidth, h = tipEl.offsetHeight, vw = innerWidth, vh = innerHeight;
+  let lx = x + 16, ty = y + 16;
+  if(lx + w > vw - 8) lx = Math.max(8, x - w - 16);
+  if(ty + h > vh - 8) ty = Math.max(8, y - h - 16);
+  tipEl.style.left = lx + "px"; tipEl.style.top = ty + "px";
+}
+function showTip(node, x, y, pin){
+  const html = tipHTML(node.dataset.tip); if(!html) return;
+  tipEl.innerHTML = `<button type="button" class="x" aria-label="${t("close")}">×</button>` + html;
+  tipEl.classList.add("on"); tipEl.classList.toggle("pin", !!pin); pinned = !!pin;
+  placeTip(x, y);
+}
+function hideTip(){ tipEl.classList.remove("on", "pin"); pinned = false; }
+const tipNode = e => { const n = e.target.closest && e.target.closest("[data-tip]"); return n && n.closest(".chart") ? n : null; };
+const nodeXY = n => { const r = n.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+
+document.addEventListener("pointerover", e => {
+  if(e.pointerType !== "mouse" || pinned) return;
+  const n = tipNode(e);
+  if(n) showTip(n, e.clientX, e.clientY, false); else hideTip();
+});
+document.addEventListener("pointermove", e => {
+  if(e.pointerType === "mouse" && !pinned && tipEl.classList.contains("on")) placeTip(e.clientX, e.clientY);
+});
+document.addEventListener("click", e => {
+  if(e.target.closest(".x")){ hideTip(); return; }
+  const n = tipNode(e);
+  if(n){ showTip(n, e.clientX, e.clientY, true); return; }
+  if(!e.target.closest("#tip")) hideTip();
+});
+document.addEventListener("focusin", e => {
+  const n = tipNode(e);
+  if(n && !pinned){ const [x, y] = nodeXY(n); showTip(n, x, y, false); }
+});
+document.addEventListener("focusout", e => { if(!pinned && tipNode(e)) hideTip(); });
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ hideTip(); return; }
+  if(e.key === "Enter" || e.key === " "){
+    const n = tipNode(e);
+    if(n){ e.preventDefault(); const [x, y] = nodeXY(n); showTip(n, x, y, true); }
+  }
+});
+window.addEventListener("scroll", () => { if(innerWidth > 700) hideTip(); }, {passive: true});
+
 function save(png){
   const x = svgEl.cloneNode(true); x.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  x.querySelectorAll(".hit").forEach(e => e.remove());
+  x.querySelectorAll("[data-tip]").forEach(e => ["data-tip", "tabindex", "role", "aria-label"].forEach(a => e.removeAttribute(a)));
   x.querySelectorAll(".sym").forEach(e => e.setAttribute("font-family", "Segoe UI Symbol,Noto Sans Symbols 2,Apple Symbols,DejaVu Sans,serif"));
   x.querySelectorAll("text:not(.sym)").forEach(e => e.setAttribute("font-family", "Georgia,serif"));
   const bg = el("rect", {x: -30, y: -30, width: 860, height: 860, fill: "#0b0714"}); x.insertBefore(bg, x.firstChild);
@@ -947,7 +1169,7 @@ function apply(){
   document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
   fillCountries(); if(cur) pi.value = cur.n;
 }
-$("lb").onclick = () => { lang = lang === "fi" ? "en" : "fi"; try{ localStorage.setItem("birthchart_store", lang); }catch(e){} apply(); };
+$("lb").onclick = () => { lang = lang === "fi" ? "en" : "fi"; try{ localStorage.setItem("birthchart_store", lang); }catch(e){} apply(); if(window.RES) render(); };
 fillCountries(); cs.value = "FI"; apply();
 
 window.addEventListener("DOMContentLoaded", () => {
