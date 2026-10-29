@@ -38,9 +38,9 @@
 <style>
 :root{color-scheme:dark;--void:#09060f;--plum:#1a1029;--plum2:#261840;--bone:#e6dcef;--dim:#9a8bb0;--rose:#c8467f;--moss:#6fb596;--amber:#d9a95b;--lav:#a995e0}
 *{box-sizing:border-box;margin:0}
-html{background:var(--void)}
-body{min-height:100dvh;color:var(--bone);font:16px/1.6 "Palatino Linotype",Palatino,Georgia,serif;padding:22px 14px 60px;
-background:radial-gradient(ellipse 80% 50% at 50% 0,#2a1646 0,transparent 70%),radial-gradient(ellipse at 20% 100%,#1d0d2c 0,transparent 60%),var(--void)}
+html{background:radial-gradient(ellipse 80% 50% at 50% 0,#2a1646 0,transparent 70%),radial-gradient(ellipse at 20% 100%,#1d0d2c 0,transparent 60%),var(--void) fixed}
+body{min-height:100dvh;color:var(--bone);font:16px/1.6 "Palatino Linotype",Palatino,Georgia,serif;padding:22px 14px 60px;background:none}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
 header{max-width:1180px;margin:0 auto 18px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 h1{font-weight:400;font-size:clamp(28px,5vw,46px);letter-spacing:.14em;line-height:1.1}
 h1 small{display:block;font-size:.34em;letter-spacing:.02em;line-height:1.5;color:var(--dim);margin-top:9px;font-style:normal;font-weight:400;max-width:720px}
@@ -157,6 +157,7 @@ table.at{width:100%;table-layout:fixed;margin:0}
 </style>
 </head>
 <body>
+<canvas id="sky" aria-hidden="true"></canvas>
 <header>
 <h1 id="title">Birth Chart<small data-t="sub"></small></h1>
 <button class="lang" id="lb" type="button">Suomeksi</button>
@@ -191,6 +192,127 @@ table.at{width:100%;table-layout:fixed;margin:0}
 </main>
 <div id="tip" role="tooltip"></div>
 <footer id="credit" class="note" style="max-width:1180px;margin:28px auto 0;text-align:center">Millaceedee <a href="https://github.com/Millaceedee/" target="_blank" rel="noopener noreferrer" style="color:inherit">© 2026</a>. Licensed under the MIT License.</footer>
+<script>
+(function(){
+var cv=document.getElementById('sky');if(!cv||!cv.getContext)return;
+var ctx=cv.getContext('2d'),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var W=0,H=0,dpr=1,stars=[],rings=[],blobs=[],shoot=null,nextShoot=0,last=0,T=0;
+var TAU=Math.PI*2,COL=['169,149,224','200,70,127','217,169,91','111,181,150'];
+function rnd(a,b){return a+Math.random()*(b-a)}
+function sprite(c,n){var o=document.createElement('canvas');o.width=o.height=n;var g=o.getContext('2d'),
+  r=g.createRadialGradient(n/2,n/2,0,n/2,n/2,n/2);r.addColorStop(0,'rgba('+c+',1)');r.addColorStop(1,'rgba('+c+',0)');
+  g.fillStyle=r;g.fillRect(0,0,n,n);return o}
+var SPR={},BLOB={};COL.forEach(function(c){SPR[c]=sprite(c,48);BLOB[c]=sprite(c,128)});
+
+function build(){
+  var area=W*H,n=Math.min(150,Math.round(area/12000));
+  stars=[];
+  for(var i=0;i<n;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:rnd(.4,1.5),
+    tw:rnd(.4,1.6),ph:rnd(0,TAU),v:rnd(1.5,7),c:Math.random()<.18?COL[(Math.random()*4)|0]:'230,220,239'});
+  var m=Math.min(W,H),big=Math.hypot(W,H)*.5;
+  rings=[];
+  for(var k=0;k<8;k++){
+    var rx=m*.14+(big-m*.14)*(k/7)*(k/7)*.95+m*.06*k;
+    rings.push({rx:rx,ry:rx*rnd(.28,.6),tilt:rnd(0,Math.PI),spin:rnd(-.012,.012),
+      dash:k%3===1,a:.07+.05*Math.random(),
+      dots:(k%2===0?[1]:[]).map(function(){
+        return{p:rnd(0,TAU),s:rnd(.05,.16)*(Math.random()<.5?-1:1),r:rnd(1.8,3.6),c:COL[(Math.random()*4)|0]}})});
+  }
+  blobs=[0,1].map(function(i){return{cx:rnd(.2,.8),cy:rnd(.2,.8),r:m*rnd(.45,.8),ph:rnd(0,TAU),sp:rnd(.02,.05),c:COL[i%3]}});
+}
+
+function resize(){
+  dpr=Math.min(window.devicePixelRatio||1,1.5);
+  W=innerWidth;H=innerHeight;
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  build();if(reduce)draw(0,0);
+}
+
+function draw(t,dt){
+  ctx.clearRect(0,0,W,H);
+  var cx=W*.5,cy=H*.46,i,j;
+
+  // slow nebula glow (pre-rendered sprites, very faint)
+  ctx.globalAlpha=.05;
+  for(i=0;i<blobs.length;i++){
+    var b=blobs[i],bx=(b.cx+Math.sin(t*b.sp+b.ph)*.08)*W,by=(b.cy+Math.cos(t*b.sp*.8+b.ph)*.08)*H;
+    ctx.drawImage(BLOB[b.c],bx-b.r,by-b.r,b.r*2,b.r*2);
+  }
+  ctx.globalAlpha=1;
+
+  // stars
+  for(i=0;i<stars.length;i++){
+    var s=stars[i];
+    s.y-=s.v*dt;s.x-=s.v*dt*.35;
+    if(s.y<-3){s.y=H+3;s.x=Math.random()*W}
+    if(s.x<-3)s.x=W+3;
+    var a=.25+.75*(.5+.5*Math.sin(t*s.tw+s.ph));
+    ctx.fillStyle='rgba('+s.c+','+(a*.8).toFixed(3)+')';
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,TAU);ctx.fill();
+  }
+
+  // orbit rings
+  ctx.save();ctx.translate(cx,cy);
+  for(i=0;i<rings.length;i++){
+    var r=rings[i],rot=r.tilt+t*r.spin;
+    ctx.save();ctx.rotate(rot);
+    ctx.lineWidth=1;ctx.strokeStyle='rgba(169,149,224,'+r.a+')';
+    ctx.setLineDash(r.dash?[2,9]:[]);
+    ctx.beginPath();ctx.ellipse(0,0,r.rx,r.ry,0,0,TAU);ctx.stroke();
+    ctx.setLineDash([]);
+    for(j=0;j<r.dots.length;j++){
+      var d=r.dots[j],an=d.p+t*d.s,x=Math.cos(an)*r.rx,y=Math.sin(an)*r.ry;
+      var gs=d.r*7;
+      ctx.globalAlpha=.22;ctx.drawImage(SPR[d.c],x-gs/2,y-gs/2,gs,gs);ctx.globalAlpha=1;
+      ctx.fillStyle='rgba('+d.c+',.6)';ctx.beginPath();ctx.arc(x,y,d.r*.6,0,TAU);ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // zodiac-like ring: 12 ticks + 12 small dots, drifting slowly
+  var zr=Math.min(W,H)*.34,zrot=t*.008;
+  ctx.strokeStyle='rgba(217,169,91,.13)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(0,0,zr,0,TAU);ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,zr*.94,0,TAU);ctx.stroke();
+  for(i=0;i<12;i++){
+    var za=zrot+i*TAU/12,ca=Math.cos(za),sa=Math.sin(za);
+    ctx.beginPath();ctx.moveTo(ca*zr*.94,sa*zr*.94);ctx.lineTo(ca*zr,sa*zr);ctx.stroke();
+    var mid=za+TAU/24;
+    ctx.fillStyle='rgba(217,169,91,.28)';
+    ctx.beginPath();ctx.arc(Math.cos(mid)*zr*.97,Math.sin(mid)*zr*.97,1.8,0,TAU);ctx.fill();
+  }
+  ctx.restore();
+
+  // rare shooting star
+  if(!reduce){
+    if(!shoot&&t>nextShoot){
+      var sx=rnd(W*.3,W),sy=rnd(0,H*.5);
+      shoot={x:sx,y:sy,vx:-rnd(380,560),vy:rnd(160,260),life:0};
+    }
+    if(shoot){
+      shoot.life+=dt;shoot.x+=shoot.vx*dt;shoot.y+=shoot.vy*dt;
+      var f=Math.max(0,1-shoot.life/1.1),L=90;
+      var n=Math.hypot(shoot.vx,shoot.vy),tx=shoot.x-shoot.vx/n*L,ty=shoot.y-shoot.vy/n*L;
+      var lg=ctx.createLinearGradient(shoot.x,shoot.y,tx,ty);
+      lg.addColorStop(0,'rgba(230,220,239,'+(.8*f).toFixed(3)+')');lg.addColorStop(1,'rgba(230,220,239,0)');
+      ctx.strokeStyle=lg;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(shoot.x,shoot.y);ctx.lineTo(tx,ty);ctx.stroke();
+      if(f<=0){shoot=null;nextShoot=t+rnd(9,20)}
+    }
+  }
+}
+
+function frame(ts){
+  var dt=Math.min(.05,(ts-last)/1000||0);last=ts;T+=dt;
+  draw(T,dt);requestAnimationFrame(frame);
+}
+
+nextShoot=6;
+addEventListener('resize',resize);
+resize();
+if(!reduce)requestAnimationFrame(function(ts){last=ts;requestAnimationFrame(frame)});
+})();
+</script>
 <script src="js/astronomy.js"></script>
 <script src="js/app.js"></script>
 </body>
