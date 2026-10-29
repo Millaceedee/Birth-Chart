@@ -52,7 +52,15 @@ main{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
 @media(min-width:1000px){main{display:grid;grid-template-columns:340px minmax(0,1fr);align-items:start}}
 
 form{background:linear-gradient(170deg,var(--plum2),var(--plum));border:1px solid #3d2a5e;border-radius:14px 2px 14px 2px;padding:20px;display:grid;gap:13px}
-@media(min-width:1000px){form{position:sticky;top:12px}}
+@media(min-width:1000px){
+form{position:sticky;top:12px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;gap:9px;padding:16px 18px 0;scrollbar-width:thin;scrollbar-color:#3d2a5e transparent}
+form .help{display:none;margin-top:-4px;font-size:12.5px;line-height:1.35}
+form .help.show{display:block}
+form h2{font-size:17px}
+form input,form select{padding:6px 9px}
+form label{gap:2px;font-size:13px}
+form .go{position:sticky;bottom:0;margin:4px -18px 0;padding:13px;border-radius:0;box-shadow:0 -12px 14px -4px var(--plum)}
+}
 
 form h2,.res h2{font-weight:400;font-size:19px;letter-spacing:.08em;color:var(--lav)}
 label{display:grid;gap:3px;font-size:14px;color:var(--dim)}
@@ -94,6 +102,21 @@ th{font-weight:400;color:var(--dim);font-style:italic}
 .chart svg path[data-tip]:not(.hit):hover{filter:brightness(1.7)}
 .chart svg circle[data-tip]:hover{fill:#2d1a4d}
 .chart-hint{text-align:center;margin-top:-8px}
+.sec{display:grid;gap:8px;min-width:0}
+.sec .note{margin:0}
+table.at{width:auto;min-width:0;margin:0 auto 0 0}
+.at th,.at td{padding:0;width:36px;min-width:36px;height:34px;text-align:center;border:1px solid #2c1e45;font-size:19px;line-height:1;font-style:normal;color:var(--bone)}
+.at th{color:var(--amber);background:var(--plum);font-size:16px}
+.at td.e{background:#0d0816}
+.at td[data-tip]{cursor:pointer}
+.at td[data-tip]:hover,.at td[data-tip]:focus-visible{background:#2d1a4d;outline:none}
+.at td[data-tip]:focus-visible{box-shadow:inset 0 0 0 2px var(--rose)}
+table.dist{width:auto;min-width:0}
+.dist th,.dist td{text-align:center;padding:7px 14px;font-style:normal}
+.dist th:first-child,.dist td:first-child{text-align:left}
+.dist td.g{font-size:18px;min-width:84px}
+.dist .tot{color:var(--amber)}
+.stars tr.hit td{color:var(--amber)}
 #tip{position:fixed;z-index:50;left:0;top:0;width:max-content;max-width:330px;background:#120a1e;border:1px solid var(--rose);border-radius:12px 2px 12px 2px;padding:12px 16px 12px;box-shadow:0 10px 34px #000b;font-size:14px;line-height:1.5;display:none;pointer-events:none}
 #tip.on{display:block}
 #tip.pin{pointer-events:auto;padding-right:34px}
@@ -116,9 +139,9 @@ th{font-weight:400;color:var(--dim);font-style:italic}
 <form id="f" autocomplete="off" novalidate>
 <h2 data-t="your"></h2>
 <p class="help" data-t="intro"></p>
-<label><span data-t="date"></span><input type="date" id="d" required min="1800-01-01" max="2099-12-31" value="2000-01-01"></label>
+<div class="row dt"><label><span data-t="date"></span><input type="date" id="d" required min="1800-01-01" max="2099-12-31" value="2000-01-01"></label>
+<label><span data-t="time"></span><input type="time" id="tm" value="12:00"></label></div>
 <p class="help" data-t="hDate"></p>
-<label><span data-t="time"></span><input type="time" id="tm" value="12:00"></label>
 <label class="chk"><input type="checkbox" id="unk"><span data-t="unk"></span></label>
 <p class="help" data-t="hTime"></p>
 <label><span data-t="country"></span><select id="c"></select></label>
@@ -126,6 +149,11 @@ th{font-weight:400;color:var(--dim);font-style:italic}
 <p class="help" data-t="hint"></p>
 <label class="chk"><input type="checkbox" id="man"><span data-t="man"></span></label>
 <p class="help" data-t="hMan"></p>
+<label><span data-t="hsys"></span><select id="hs"><option value="P">Placidus</option><option value="K">Koch</option><option value="W" data-t="hsW"></option><option value="E" data-t="hsE"></option></select></label>
+<p class="help" data-t="hHs"></p>
+<label><span data-t="aspm"></span><select id="asp"><option value="all" data-t="aspAll"></option><option value="major" data-t="aspMaj"></option></select></label>
+<label class="chk"><input type="checkbox" id="ext" checked><span data-t="ext"></span></label>
+<p class="help" data-t="hExt"></p>
 <div id="mb" hidden style="display:none;gap:10px">
 <div class="row"><label>lat<input id="la" inputmode="decimal" value="60.17"></label><label>lon<input id="lo" inputmode="decimal" value="24.94"></label></div>
 <label><span data-t="tz"></span><input id="tz" value="Europe/Helsinki"></label>
@@ -427,7 +455,21 @@ class SwissEph {
     let sp = ((b - a + 540) % 360 - 180) / 0.01;
     return [a, 0, 1, sp, 0, 0];
   }
-  houses(jd, lat, lon) {
+  // Mean lunar apogee ("Black Moon Lilith"), true equinox of date.
+  meanApogee(jd) {
+    const T = (jd - 2451545) / 36525, AE = Astronomy;
+    const peri = 83.3532465 + 4069.0137287 * T - 0.01032 * T * T - T * T * T / 80053 + T * T * T * T / 18999000;
+    const dpsi = AE.e_tilt(new AE.AstroTime(this.#date(jd))).dpsi / 3600;
+    return (((peri + 180 + dpsi) % 360) + 360) % 360;
+  }
+  // Ecliptic longitude of a fixed star (J2000 RA in hours, Dec in degrees, distance in light years), true equinox of date.
+  star(jd, ra, dec, ly) {
+    const AE = Astronomy;
+    AE.DefineStar(AE.Body.Star1, ra, dec, ly);
+    return AE.Ecliptic(AE.GeoVector(AE.Body.Star1, this.#date(jd), true)).elon;
+  }
+  // sys: P = Placidus, K = Koch, W = Whole Sign, E = Equal
+  houses(jd, lat, lon, sys = "P") {
     const AE = Astronomy, date = this.#date(jd), R = Math.PI / 180, nm = x => ((x % 360) + 360) % 360;
     const eps = AE.e_tilt(new AE.AstroTime(date)).tobl * R;
     const ramc = nm(AE.SiderealTime(date) * 15 + lon), rm = ramc * R, phi = lat * R;
@@ -454,19 +496,46 @@ class SwissEph {
       }
       return eclFromRA(ra);
     };
+    // Ascendant-type point for a given sidereal angle (deg) and latitude (rad); used by Koch and the Vertex.
+    const ascAt = (rd, ph) => nm(Math.atan2(Math.cos(rd * R), -(Math.sin(rd * R) * Math.cos(eps) + Math.tan(ph) * Math.sin(eps))) / R);
+    // Koch: divides the semi-arc of the MC degree into thirds.
+    const koch = () => {
+      const sina = Math.max(-1, Math.min(1, Math.sin(mcF * R) * Math.sin(eps) / Math.cos(phi)));
+      const cosa = Math.sqrt(1 - sina * sina);
+      const c = Math.atan(Math.tan(phi) / cosa);
+      const ad3 = Math.asin(Math.sin(c) * sina) / R / 3;
+      // The cusps are the ascendants at one third and two thirds of the MC degree's semi-arc
+      // (before the birth moment for houses 11-12, after it for houses 2-3).
+      cusp[11] = ascAt(ramc - 60 - 2 * ad3, phi);
+      cusp[12] = ascAt(ramc - 30 - ad3, phi);
+      cusp[2] = ascAt(ramc + 30 + ad3, phi);
+      cusp[3] = ascAt(ramc + 60 + 2 * ad3, phi);
+    };
     let ok = Math.abs(lat) < 90 - eps / R - 0.01;
-    cusp[1] = asc; cusp[10] = mcF; cusp[4] = nm(mcF + 180); cusp[7] = nm(asc + 180);
-    if (ok) {
-      cusp[11] = pl(11); cusp[12] = pl(12); cusp[2] = pl(2); cusp[3] = pl(3);
-    } else { // napa-alueet: Porphyry
-      const q = nm(cusp[4] - asc) ;
-      cusp[2] = nm(asc + q / 3); cusp[3] = nm(asc + 2 * q / 3);
-      const q2 = nm(asc - mcF);
-      cusp[11] = nm(mcF + q2 / 3); cusp[12] = nm(mcF + 2 * q2 / 3);
+    if (sys === "W") {
+      const b = Math.floor(asc / 30) * 30;
+      for (let i = 1; i <= 12; i++) cusp[i] = nm(b + 30 * (i - 1));
+    } else if (sys === "E") {
+      for (let i = 1; i <= 12; i++) cusp[i] = nm(asc + 30 * (i - 1));
+    } else {
+      cusp[1] = asc; cusp[10] = mcF; cusp[4] = nm(mcF + 180); cusp[7] = nm(asc + 180);
+      if (ok && sys === "K") {
+        koch();
+      } else if (ok) {
+        cusp[11] = pl(11); cusp[12] = pl(12); cusp[2] = pl(2); cusp[3] = pl(3);
+      } else { // polar regions: Porphyry
+        const q = nm(cusp[4] - asc) ;
+        cusp[2] = nm(asc + q / 3); cusp[3] = nm(asc + 2 * q / 3);
+        const q2 = nm(asc - mcF);
+        cusp[11] = nm(mcF + q2 / 3); cusp[12] = nm(mcF + 2 * q2 / 3);
+      }
+      cusp[5] = nm(cusp[11] + 180); cusp[6] = nm(cusp[12] + 180);
+      cusp[8] = nm(cusp[2] + 180); cusp[9] = nm(cusp[3] + 180);
     }
-    cusp[5] = nm(cusp[11] + 180); cusp[6] = nm(cusp[12] + 180);
-    cusp[8] = nm(cusp[2] + 180); cusp[9] = nm(cusp[3] + 180);
-    return { cusps: cusp, ascmc: new Float64Array([asc, mcF, ramc, 0]) };
+    // Vertex: where the prime vertical meets the ecliptic in the west (between IC and MC, via the Descendant).
+    let vx = ascAt(ramc + 180, (90 - lat) * R);
+    if (nm(vx - (mcF + 180)) > 180) vx = nm(vx + 180);
+    return { cusps: cusp, ascmc: new Float64Array([asc, mcF, ramc, vx]) };
   }
 }
 
@@ -519,17 +588,44 @@ IL|Asia/Jerusalem|Israel|Israel|Jerusalem,31.77,35.22;Tel Aviv,32.09,34.78
 AE|Asia/Dubai|Arabiemiraatit|United Arab Emirates|Dubai,25.20,55.27`.split("\n").map(l=>{const[a,tz,fi,en,cs]=l.split("|");return{cc:a,fi,en,cs:cs.split(";").map(s=>{const p=s.split(",");return{n:p[0],lat:+p[1],lon:+p[2],tz:p[3]||tz}})}});
 
 const SIGN=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map(s=>s+"\uFE0E");
-const PG=["☉","☽","☿","♀","♂","♃","♄","♅","♆","♇","☊"].map(s=>s+"\uFE0E");
+// Bodies 0-10: Sun..Pluto, North Node. Extras: 11 Lilith, 12 South Node, 13 Part of Fortune, 14 Vertex.
+const PG=["\u2609","\u263D","\u263F","\u2640","\u2642","\u2643","\u2644","\u2645","\u2646","\u2647","\u260A","\u26B8","\u260B","\u2297"].map(s=>s+"\uFE0E").concat(["Vx"]);
+const NB=15, XT=[11,12,13,14];
+// Aspects: [angle, orb, colour, symbol, minor]
+const ASPT=[
+[0,8,"#e0b866","\u260C\uFE0E",0],
+[30,2,"#a995e0","\u26BA\uFE0E",1],
+[45,2.5,"#c8467f","\u2220",1],
+[60,5,"#6fb596","\u26B9\uFE0E",0],
+[90,7,"#c8467f","\u25A1",0],
+[120,7,"#6fb596","\u25B3",0],
+[135,2.5,"#c8467f","\u26BC\uFE0E",1],
+[150,3,"#a995e0","\u26BB\uFE0E",1],
+[180,8,"#c8467f","\u260D\uFE0E",0]];
+// Fixed stars: [name, RA J2000 (hours), Dec J2000 (deg), distance (light years)]
+const STARS=[
+["Algol",3.136148,40.95565,90],["Alcyone",3.791411,24.10514,440],["Aldebaran",4.598678,16.5093,65],
+["Rigel",5.242298,-8.20164,860],["Capella",5.278155,45.998,43],["Betelgeuse",5.91953,7.40706,550],
+["Sirius",6.752477,-16.71611,8.6],["Procyon",7.655033,5.22499,11.5],["Pollux",7.755264,28.02619,34],
+["Regulus",10.139531,11.96721,79],["Spica",13.419883,-11.16132,250],["Arcturus",14.260742,19.18242,37],
+["Antares",16.490128,-26.432,550],["Vega",18.61565,38.78369,25],["Altair",19.846389,8.86833,17],
+["Deneb",20.690528,45.28028,2600],["Fomalhaut",22.960847,-29.62224,25]];
 const L={fi:{
 sub:"Astrologinen kartta syntymähetkesi taivaasta – tutustu planeettojen sijainteihin ja niiden symbolisiin tulkintoihin.",your:"Tietosi",date:"Syntymäpäivä",time:"Syntymän kellonaika",unk:"En tiedä tarkkaa kellonaikaa",country:"Syntymämaa",place:"Syntymäpaikka",
 hint:"Syntymäpaikka määrittää, miltä taivas näytti juuri siellä syntymähetkelläsi. Kirjoita paikkakunnan alkua ja valitse se avautuvalta listalta.",man:"Syötä koordinaatit itse",tz:"Aikavyöhyke (IANA)",go:"Laske kartta",
 empty:"Täytä tietosi vasemmalta ja valitse paikka listasta, niin kartta piirtyy tähän.",pick:"Valitse paikkakunta listalta.",baddate:"Syötä syntymäpäivä.",badco:"Tarkista koordinaatit ja aikavyöhyke.",
 sign:["Oinas","Härkä","Kaksoset","Rapu","Leijona","Neitsyt","Vaaka","Skorpioni","Jousimies","Kauris","Vesimies","Kalat"],
 kw:["rohkea ja välitön","vakaa ja aistillinen","utelias ja vaihteleva","suojaava ja tunteellinen","loistava ja antelias","tarkka ja käytännöllinen","tasapainoa ja kumppanuutta etsivä","syvä ja intensiivinen","vapautta ja merkitystä etsivä","kurinalainen ja kunnianhimoinen","omaperäinen ja riippumaton","herkkä ja mielikuvituksellinen"],
-body:["Aurinko","Kuu","Merkurius","Venus","Mars","Jupiter","Saturnus","Uranus","Neptunus","Pluto","Pohjoinen solmu"],asc:"Nousumerkki",mc:"Keskitaivas (MC)",
+body:["Aurinko","Kuu","Merkurius","Venus","Mars","Jupiter","Saturnus","Uranus","Neptunus","Pluto","Pohjoinen solmu","Lilith (keskimääräinen)","Eteläinen solmu","Fortuna-piste","Vertex"],asc:"Nousumerkki",mc:"Keskitaivas (MC)",
 mean:["Perusluonne ja elämänvoima","Tunteet ja turvan tarve","Ajattelu ja puhetapa","Rakkaus ja arvot","Tahto ja toimintatapa"],ascm:"Ulospäin näkyvä olemus",
 th:["Kohde","Merkki","Aste","Talo"],house:"Talo",asp:"Aspektit",quick:"Pikatulkinnat",full:"Kaikki sijainnit",svg:"Tallenna SVG",png:"Tallenna PNG",
-note:"Laskenta: astronomy-engine (tarkkuus alle 1 kaariminuutti), Placidus-talot, todellinen solmu.",untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
+note:"Laskenta: astronomy-engine (tarkkuus alle 1 kaariminuutti), todellinen solmu, keskimääräinen Lilith.",fort:"Fortuna-piste vaihtaa laskukaavaa yösyntymillä.",
+hsys:"Talojärjestelmä",hsW:"Whole Sign (kokonaiset merkit)",hsE:"Equal (tasatalot)",hHs:"Talojärjestelmä määrää, mistä kohdasta talot alkavat. Placidus on yleisin; Whole Sign tekee jokaisesta merkistä yhden talon.",
+hsn:{P:"Placidus-talot",K:"Koch-talot",W:"Whole Sign -talot",E:"Equal-talot"},
+aspm:"Aspektit",aspAll:"Pää- ja sivuaspektit",aspMaj:"Vain pääaspektit",ext:"Näytä lisäpisteet (Lilith, eteläinen solmu, Fortuna, Vertex)",hExt:"Fortuna ja Vertex vaativat tarkan kellonajan.",
+aspT:"Aspektitaulukko",aspN:"Vihreä = sujuva, punainen = jännite, violetti = hienovarainen, kulta = konjunktio. Napauta tai vie hiiri ruudun päälle nähdäksesi selityksen.",
+dist:"Alkuaineet ja ominaisuudet",distN:"Mukana Aurinko–Pluto sekä, jos kellonaika on tiedossa, nousumerkki ja MC.",dom:"Vallitseva alkuaine",domM:"Vallitseva ominaisuus",
+stars:"Kiinteät tähdet",starsN:"Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Konjunktio = alle 1° päässä planeetasta, pisteestä tai akselista.",sth:["Tähti","Merkki","Aste","Konjunktio"],untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
 intro:"Mitä tarkemmat syntymätiedot ovat, sitä tarkempi kartasta tulee. Kartan voi laskea myös ilman kellonaikaa.",
 hDate:"Syntymäpäivä määrittää esimerkiksi aurinkomerkkisi eli tutun horoskooppimerkkisi sekä planeettojen sijainnit.",
 hTime:"Kellonaika määrittää esimerkiksi nousumerkkisi ja talojen jaon. Jos et tiedä sitä, valitse ruutu: kartta piirretään silloin ilman nousumerkkiä ja taloja, ja Kuun sijainti on vain suuntaa antava.",
@@ -547,7 +643,11 @@ pd:["Perusluonteesi, identiteettisi ja elämänvoimasi: se, kuka olet ja mihin s
 "Vapaus, uudistus ja yllätykset: missä rikot totuttua ja olet omaperäinen.",
 "Unelmat, intuitio ja mielikuvitus: missä haaveilet, eläydyt tai asiat sumenevat.",
 "Syvä muutos ja voima: missä vanha päättyy ja uutta syntyy.",
-"Kuun kiertoradan nouseva solmu. Symbolisesti suunta, johon kasvat: vieras alue, joka vaatii opettelua."],
+"Kuun kiertoradan nouseva solmu. Symbolisesti suunta, johon kasvat: vieras alue, joka vaatii opettelua.",
+"Kuun kiertoradan kaukaisin piste (keskimääräinen apogee, ”Musta Kuu”). Symbolisesti piilotettu, villi tai torjuttu puoli: se, mitä et suostu mukauttamaan muiden odotuksiin.",
+"Pohjoisen solmun vastakohta. Symbolisesti tuttu ja jo hallittu alue: taidot ja tottumukset, joihin on helppo turvautua, mutta joihin voi myös jäädä jumiin.",
+"Nousumerkistä, Auringosta ja Kuusta laskettu piste. Symbolisesti se, missä onni ja hyvinvointi tuntuvat luontevimmilta.",
+"Laskennallinen piste kartan länsipuolella, jossa ekliptika leikkaa itä–länsi-suuntaisen pystyympyrän (prime vertical). Symbolisesti kohtalokkaat kohtaamiset ja ihmiset, jotka tuntuvat tulevan elämääsi kuin itsestään."],
 slow:"Hidas planeetta: se viipyy samassa merkissä vuosia, joten merkki on yhteinen koko ikäluokallesi. Henkilökohtaisemmin kertoo talo.",
 moonN:"Kellonaika ei ole tiedossa, joten Kuun sijainti on vain suuntaa antava: Kuu liikkuu päivässä yli 12 astetta.",
 ins:"Merkissä",typ:"Tyypillisesti:",retro:"taaksepäinen",
@@ -558,23 +658,29 @@ el:["Tuli","Maa","Ilma","Vesi"],
 eld:["Tulimerkki: intoa, rohkeutta ja toimintaa.","Maamerkki: käytännöllisyyttä, pysyvyyttä ja aistillisuutta.","Ilmamerkki: ajattelua, puhetta ja vuorovaikutusta.","Vesimerkki: tunteita, herkkyyttä ja vaistoa."],
 mo:["Aloittava","Vakaa","Muuttuva"],
 mod:["Aloittava (kardinaali) merkki tarttuu uuteen ja käynnistää asioita.","Vakaa (kiinteä) merkki pitää kiinni ja vie asiat loppuun.","Muuttuva merkki mukautuu ja vaihtaa suuntaa joustavasti."],
-an:["Sekstiili","Neliö","Trigoni","Oppositio"],
-ad:["Sujuva ja tukeva yhteys: kaksi puolta sinussa tekee luontevasti yhteistyötä, kun siihen tarttuu. Vihreä viiva.","Jännite, joka haastaa toimimaan: kaksi puolta vetää eri suuntiin, ja ristiriita ajaa usein kehittymään. Punainen viiva.","Helppo ja luonteva yhteys: voimavara, joka toimii melkein itsestään. Vihreä viiva.","Vastakkainasettelu: kaksi puolta on vastapäätä toisiaan, ja haasteena on löytää niiden välille tasapaino. Punainen viiva."],
+an:["Konjunktio","Puolisekstiili","Puolineliö","Sekstiili","Neliö","Trigoni","Seskvineliö","Kvinkunssi","Oppositio"],
+ad:["Kaksi pistettä samassa kohdassa: voimat sulautuvat ja vahvistavat toisiaan, hyvässä ja pahassa. Ei piirretä kartalle viivaksi.","Pieni ja hienovarainen yhteys: vierekkäisillä merkeillä ei ole mitään yhteistä, joten yhteys tuntuu hieman vieraalta. Violetti viiva.","Lievä kitka ja ärtymys: pieni jännite, joka kasaantuu helposti ja vaatii huomiota. Punainen viiva.","Sujuva ja tukeva yhteys: kaksi puolta sinussa tekee luontevasti yhteistyötä, kun siihen tarttuu. Vihreä viiva.","Jännite, joka haastaa toimimaan: kaksi puolta vetää eri suuntiin, ja ristiriita ajaa usein kehittymään. Punainen viiva.","Helppo ja luonteva yhteys: voimavara, joka toimii melkein itsestään. Vihreä viiva.","Levoton jännite: lievä mutta toistuva ärsyke, joka patistaa toimimaan. Punainen viiva.","Epämukava, vaikeasti sovitettava yhteys: kaksi puolta ei ymmärrä toisiaan luontevasti ja tilanne vaatii jatkuvaa säätämistä. Violetti viiva.","Vastakkainasettelu: kaksi puolta on vastapäätä toisiaan, ja haasteena on löytää niiden välille tasapaino. Punainen viiva."],
 orbL:"Poikkeama tarkasta kulmasta",
 axn:{A:"Nousumerkki (ASC)",D:"Laskeva merkki (DSC)",M:"Keskitaivas (MC)",I:"Pohjataivas (IC)"},
-axd:{A:"Merkki, joka nousi itähorisontista syntymähetkelläsi. Kuvaa ulospäin näkyvää olemustasi ja ensivaikutelmaa. Kartan vasen reuna ja 1. talon alku.",
-D:"Vastapäätä nousumerkkiä, 7. talon alku. Kuvaa sitä, mitä etsit toisista ihmisistä ja kumppanuuksista.",
-M:"Kartan korkein kohta ja 10. talon alku. Kuvaa uraa, tavoitteita ja julkista roolia.",
-I:"Kartan alin kohta ja 4. talon alku. Kuvaa kotia, juuria ja yksityistä sisintä."}},
+axd:{A:"Merkki, joka nousi itähorisontista syntymähetkelläsi. Kuvaa ulospäin näkyvää olemustasi ja ensivaikutelmaa. Kartan vasen reuna.",
+D:"Nousumerkin vastakohta kartan oikeassa reunassa. Kuvaa sitä, mitä etsit toisista ihmisistä ja kumppanuuksista.",
+M:"Kartan korkein kohta. Kuvaa uraa, tavoitteita ja julkista roolia.",
+I:"Kartan alin kohta. Kuvaa kotia, juuria ja yksityistä sisintä."}},
 en:{sub:"An astrological map of the sky at your birth, exploring planetary positions and their symbolic meanings.",your:"Your details",date:"Date of birth",time:"Time of birth",unk:"I don’t know the exact time",country:"Country of birth",place:"Place of birth",
 hint:"The place of birth determines what the sky looked like from exactly there at the moment you were born. Type the first letters of the place and choose it from the list.",man:"Enter coordinates myself",tz:"Time zone (IANA)",go:"Cast the chart",
 empty:"Fill in your details and choose a place from the list to draw the chart.",pick:"Choose the place from the list.",baddate:"Enter a date of birth.",badco:"Check the coordinates and time zone.",
 sign:["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"],
 kw:["bold and direct","steady and sensual","curious and changeable","protective and feeling","radiant and generous","precise and practical","seeking balance and partnership","deep and intense","seeking freedom and meaning","disciplined and ambitious","original and independent","sensitive and imaginative"],
-body:["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","North Node"],asc:"Ascendant",mc:"Midheaven (MC)",
+body:["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","North Node","Lilith (mean apogee)","South Node","Part of Fortune","Vertex"],asc:"Ascendant",mc:"Midheaven (MC)",
 mean:["Core self and vitality","Emotions and need for safety","Thinking and speech","Love and values","Will and drive"],ascm:"The face you show the world",
 th:["Body","Sign","Degree","House"],house:"House",asp:"Aspects",quick:"Quick readings",full:"All positions",svg:"Save SVG",png:"Save PNG",
-note:"Calculated with astronomy-engine (sub-arcminute accuracy), Placidus houses, true node.",untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
+note:"Calculated with astronomy-engine (sub-arcminute accuracy), true node, mean Lilith.",fort:"The Part of Fortune switches its formula for night births.",
+hsys:"House system",hsW:"Whole Sign",hsE:"Equal",hHs:"The house system decides where the houses begin. Placidus is the most common; Whole Sign makes each sign one house.",
+hsn:{P:"Placidus houses",K:"Koch houses",W:"Whole Sign houses",E:"Equal houses"},
+aspm:"Aspects",aspAll:"Major and minor aspects",aspMaj:"Major aspects only",ext:"Show extra points (Lilith, South Node, Fortune, Vertex)",hExt:"Fortune and Vertex need an exact birth time.",
+aspT:"Aspect grid",aspN:"Green = flowing, red = tension, violet = subtle, gold = conjunction. Tap or hover a cell for an explanation.",
+dist:"Elements and modalities",distN:"Includes Sun to Pluto and, if the birth time is known, the ascendant and MC.",dom:"Dominant element",domM:"Dominant modality",
+stars:"Fixed stars",starsN:"Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Conjunct = within 1° of a planet, point or axis.",sth:["Star","Sign","Degree","Conjunct"],untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
 intro:"The more precise your birth details are, the more precise the chart will be. A chart can also be made without the time of birth.",
 hDate:"The date of birth determines, for example, your Sun sign (the zodiac sign you already know) and the positions of the planets.",
 hTime:"The time of birth determines, for example, your rising sign and the division of the houses. If you don’t know it, tick the box: the chart is then drawn without the ascendant and houses, and the Moon’s position is only approximate.",
@@ -592,7 +698,11 @@ pd:["Your core self, identity and vitality: who you are and where you are headin
 "Freedom, reform and surprises: where you break the routine and are original.",
 "Dreams, intuition and imagination: where you dream, empathize or things blur.",
 "Deep change and power: where the old ends and something new is born.",
-"The rising node of the Moon’s orbit. Symbolically the direction you grow toward: unfamiliar ground that takes practice."],
+"The rising node of the Moon’s orbit. Symbolically the direction you grow toward: unfamiliar ground that takes practice.",
+"The farthest point of the Moon’s orbit (mean apogee, the “Black Moon”). Symbolically a hidden, wild or rejected side: what you refuse to fit to other people’s expectations.",
+"Opposite the North Node. Symbolically familiar, already mastered ground: skills and habits that are easy to fall back on, but that you can also get stuck in.",
+"A point calculated from the ascendant, Sun and Moon. Symbolically where luck and well-being come most naturally.",
+"A calculated point in the west of the chart where the ecliptic crosses the prime vertical (the east–west vertical circle). Symbolically fateful encounters and people who seem to arrive in your life as if on their own."],
 slow:"A slow planet: it stays in one sign for years, so the sign is shared by your whole generation. The house says more about you personally.",
 moonN:"The time of birth is unknown, so the Moon’s position is only approximate: the Moon moves over 12 degrees a day.",
 ins:"In",typ:"Typically:",retro:"retrograde",
@@ -603,14 +713,14 @@ el:["Fire","Earth","Air","Water"],
 eld:["Fire sign: enthusiasm, courage and action.","Earth sign: practicality, stability and sensuality.","Air sign: thinking, speech and interaction.","Water sign: feelings, sensitivity and instinct."],
 mo:["Cardinal","Fixed","Mutable"],
 mod:["A cardinal sign seizes the new and gets things started.","A fixed sign holds on and sees things through.","A mutable sign adapts and changes direction flexibly."],
-an:["Sextile","Square","Trine","Opposition"],
-ad:["A smooth, supportive link: two sides of you cooperate naturally when you act on it. Green line.","Tension that challenges you to act: two sides pull in different directions, and the conflict often drives growth. Red line.","An easy, natural link: a resource that works almost by itself. Green line.","A face-off: two sides stand opposite each other, and the challenge is to find balance between them. Red line."],
+an:["Conjunction","Semisextile","Semisquare","Sextile","Square","Trine","Sesquiquadrate","Quincunx","Opposition"],
+ad:["Two points in the same place: the forces merge and amplify each other, for better or worse. Not drawn as a line on the chart.","A small, subtle link: neighbouring signs share nothing, so the connection feels slightly foreign. Violet line.","Mild friction and irritation: a small tension that builds up easily and needs attention. Red line.","A smooth, supportive link: two sides of you cooperate naturally when you act on it. Green line.","Tension that challenges you to act: two sides pull in different directions, and the conflict often drives growth. Red line.","An easy, natural link: a resource that works almost by itself. Green line.","A restless tension: a mild but recurring irritant that nudges you into action. Red line.","An awkward link that is hard to reconcile: two sides don’t understand each other naturally, and the situation needs constant adjusting. Violet line.","A face-off: two sides stand opposite each other, and the challenge is to find balance between them. Red line."],
 orbL:"Distance from the exact angle",
 axn:{A:"Ascendant (ASC)",D:"Descendant (DSC)",M:"Midheaven (MC)",I:"Imum Coeli (IC)"},
-axd:{A:"The sign that was rising on the eastern horizon at your birth. Describes how you appear and your first impression. The left edge of the chart and the start of the 1st house.",
-D:"Opposite the ascendant, the start of the 7th house. Describes what you look for in other people and partnerships.",
-M:"The highest point of the chart and the start of the 10th house. Describes career, goals and public role.",
-I:"The lowest point of the chart and the start of the 4th house. Describes home, roots and your private inner life."}}};
+axd:{A:"The sign that was rising on the eastern horizon at your birth. Describes how you appear and your first impression. The left edge of the chart.",
+D:"Opposite the ascendant, on the right edge of the chart. Describes what you look for in other people and partnerships.",
+M:"The highest point of the chart. Describes career, goals and public role.",
+I:"The lowest point of the chart. Describes home, roots and your private inner life."}}};
 
 // Language preference is stored under the existing, explicitly requested key.
 let lang="en";try{const s=localStorage.getItem("birthchart_store");if(s==="en"||s==="fi")lang=s}catch(e){}
@@ -630,7 +740,6 @@ function toUTC(y, m, d, H, M, tz){
   return u;
 }
 
-const ASP = [[0,8,"#e0b866",""],[60,5,"#6fb596",""],[90,7,"#c8467f",""],[120,7,"#6fb596",""],[180,8,"#c8467f",""]];
 
 let cur = {n:"Helsinki", lat:60.17, lon:24.94, tz:"Europe/Helsinki"}, sel = -1;
 const cs = $("c"), pi = $("p"), sg = $("sug");
@@ -668,6 +777,8 @@ sg.addEventListener("mousedown", e => {
 pi.addEventListener("blur", () => setTimeout(() => sg.hidden = true, 120));
 cs.addEventListener("change", () => { cur = null; pi.value = ""; sg.hidden = true; const co = DB.find(c => c.cc === cs.value); $("tz").value = co.cs[0].tz; });
 $("unk").addEventListener("change", e => $("tm").disabled = e.target.checked);
+// House system, aspect set and extra points update an existing chart immediately.
+["hs", "asp", "ext"].forEach(id => $(id).addEventListener("change", () => { if(!window.RES) return; const r = calc(); if(r){ window.RES = r; render(); } }));
 $("man").addEventListener("change", e => { const on = e.target.checked; $("mb").style.display = on ? "grid" : "none"; pi.disabled = cs.disabled = on; });
 
 let svgEl = null;
@@ -774,8 +885,11 @@ function draw(res){
       stroke: "#4a3470", "stroke-width": 0.8
     }));
 
+    // Cusps that coincide with an axis are drawn as the thicker axis line; all others here.
+    const axs = [res.h.asc, res.h.asc + 180, res.h.mc, res.h.mc + 180];
     for(let i = 0; i < 12; i++){
-      if(i % 3 !== 0){
+      const onAxis = axs.some(x => Math.abs(((cu[i] - x + 540) % 360) - 180) < 0.05);
+      if(!onAxis){
         g.appendChild(line(cu[i], RI, cu[i], RS, {
           stroke: "#4a3470", "stroke-width": 1.2
         }));
@@ -826,44 +940,31 @@ function draw(res){
     }
   }
 
-  // Aspect lines.
+  // Aspect lines (conjunctions are not drawn). Minor aspects are thinner and dashed.
   const pts = res.lon.slice(0, 10).map((l, i) => ({l, i}));
   if(res.known){
     pts.push({l: res.h.asc, i: "A"}, {l: res.h.mc, i: "M"});
   }
 
-  const ASPS = [
-    [60, 5, "#6fb596"],
-    [90, 7, "#c8467f"],
-    [120, 7, "#6fb596"],
-    [180, 8, "#c8467f"]
-  ];
-
   for(let i = 0; i < pts.length; i++){
     for(let j = i + 1; j < pts.length; j++){
-      let d = Math.abs(pts[i].l - pts[j].l);
-      if(d > 180) d = 360 - d;
-
-      for(let ai = 0; ai < ASPS.length; ai++){
-        const [angle, orb, color] = ASPS[ai];
-        if(Math.abs(d - angle) <= orb){
-          g.appendChild(line(
-            pts[i].l, RI - 1, pts[j].l, RI - 1,
-            {stroke: color, "stroke-width": 1.3, opacity: 0.85, class: "asp"}
-          ));
-          g.appendChild(line(
-            pts[i].l, RI - 1, pts[j].l, RI - 1,
-            {stroke: "transparent", "stroke-width": 12, class: "hit",
-             "data-tip": "a|" + pts[i].i + "|" + pts[j].i + "|" + ai + "|" + Math.abs(d - angle).toFixed(1)}
-          ));
-          break;
-        }
-      }
+      const f = aspectOf(pts[i].l, pts[j].l, res.asp === "major");
+      if(!f || f.ai === 0) continue;
+      const [angle, orb, color, , minor] = ASPT[f.ai];
+      const at = {stroke: color, "stroke-width": minor ? 0.9 : 1.3, opacity: minor ? 0.65 : 0.85, class: "asp"};
+      if(minor) at["stroke-dasharray"] = "4 3";
+      g.appendChild(line(pts[i].l, RI - 1, pts[j].l, RI - 1, at));
+      g.appendChild(line(
+        pts[i].l, RI - 1, pts[j].l, RI - 1,
+        {stroke: "transparent", "stroke-width": 12, class: "hit",
+         "data-tip": "a|" + pts[i].i + "|" + pts[j].i + "|" + f.ai + "|" + f.off.toFixed(1)}
+      ));
     }
   }
 
   // Spread nearby planet labels without changing their actual zodiac positions.
   const bodies = res.lon.map((l, i) => ({l, i, labelAngle: l}))
+    .filter(b => b.l != null)
     .sort((a, b) => a.l - b.l);
 
   for(let pass = 0; pass < 40; pass++){
@@ -908,7 +1009,7 @@ function draw(res){
       x: label[0], y: label[1],
       "text-anchor": "middle",
       "dominant-baseline": "central",
-      "font-size": i === 10 ? 22 : 25,
+      "font-size": i === 14 ? 15 : i >= 10 ? 22 : 25,
       fill: i < 2 ? "#e0b866" : "#e6dcef",
       class: "sym"
     }, PG[i]));
@@ -959,6 +1060,17 @@ function draw(res){
 }
 
 function readSign(l){ return Math.floor(l / 30); }
+// Finds the aspect between two longitudes: {ai: index into ASPT, off: distance from exact angle} or null.
+function aspectOf(a, b, majorOnly){
+  let d = Math.abs(a - b) % 360;
+  if(d > 180) d = 360 - d;
+  for(let ai = 0; ai < ASPT.length; ai++){
+    if(majorOnly && ASPT[ai][4]) continue;
+    const off = Math.abs(d - ASPT[ai][0]);
+    if(off <= ASPT[ai][1]) return {ai, off};
+  }
+  return null;
+}
 function houseOf(l, cu){
   for(let i = 0; i < 12; i++){
     let a = cu[i], b = cu[(i + 1) % 12], x = nm(l - a), w = nm(b - a);
@@ -992,17 +1104,96 @@ function calc(){
     rx.push(i < 10 && resCalc[3] < 0);
   }
 
+  // Extra points: 11 Lilith, 12 South Node, 13 Part of Fortune, 14 Vertex (the last two need the birth time).
+  const sys = $("hs").value, ext = $("ext").checked;
+  lon[11] = ext ? nm(swe.meanApogee(jdUT)) : null;
+  lon[12] = ext ? nm(lon[10] + 180) : null;
+  lon[13] = lon[14] = null;
+  for(let i = 11; i < NB; i++) rx.push(false);
+
   let housesRes = null;
   if(known){
-    const h = swe.houses(jdUT, place.lat, place.lon);
+    const h = swe.houses(jdUT, place.lat, place.lon, sys);
     housesRes = {
       asc: nm(h.ascmc[0]),
       mc: nm(h.ascmc[1]),
       c: Array.from(h.cusps).slice(1, 13).map(val => nm(val))
     };
+    if(ext){
+      // Day birth (Sun above the horizon): Asc + Moon - Sun. Night birth: Asc + Sun - Moon.
+      const day = nm(lon[0] - housesRes.asc) >= 180;
+      lon[13] = nm(day ? housesRes.asc + lon[1] - lon[0] : housesRes.asc + lon[0] - lon[1]);
+      lon[14] = nm(h.ascmc[3]);
+    }
   }
 
-  return {lon, rx, known, h: housesRes, place};
+  const stars = STARS.map(([n, ra, dec, ly]) => ({n, l: nm(swe.star(jdUT, ra, dec, ly))})).sort((a, b) => a.l - b.l);
+
+  return {lon, rx, known, h: housesRes, place, sys, ext, asp: $("asp").value, stars};
+}
+
+/* ---------- Extra sections: aspect grid, element/modality distribution, fixed stars ---------- */
+function chartPoints(res){
+  // ids of points that take part in aspects: Sun..Pluto, nodes, Lilith, Fortune, Vertex, then AC and MC. The South Node is left out (it only mirrors the North Node).
+  const ids = [];
+  for(let i = 0; i < NB; i++){ if(i !== 12 && res.lon[i] != null) ids.push(i); }
+  if(res.known) ids.push("A", "M");
+  return ids;
+}
+const lonOf = (res, id) => id === "A" ? res.h.asc : id === "M" ? res.h.mc : res.lon[id];
+const ptLabel = id => id === "A" ? "AC" : id === "M" ? "MC" : PG[id];
+
+function aspectGrid(res, T){
+  const ids = chartPoints(res), major = res.asp === "major", box = document.createElement("div");
+  box.className = "sec";
+  let h = `<h2>${T.aspT}</h2><p class="note">${T.aspN}</p><div class="tw"><table class="at"><thead><tr><th></th>`;
+  ids.slice(0, -1).forEach(id => { h += `<th class="sym">${ptLabel(id)}</th>`; });
+  h += "</tr></thead><tbody>";
+  for(let i = 1; i < ids.length; i++){
+    h += `<tr><th class="sym">${ptLabel(ids[i])}</th>`;
+    for(let j = 0; j < i; j++){
+      const f = aspectOf(lonOf(res, ids[i]), lonOf(res, ids[j]), major);
+      if(f){
+        h += `<td class="sym" style="color:${ASPT[f.ai][2]}" data-tip="a|${ids[j]}|${ids[i]}|${f.ai}|${f.off.toFixed(1)}" tabindex="0" role="button" aria-label="${T.an[f.ai]}">${ASPT[f.ai][3]}</td>`;
+      } else h += "<td></td>";
+    }
+    h += "</tr>";
+  }
+  box.innerHTML = h + "</tbody></table></div>";
+  return box;
+}
+
+function distribution(res, T){
+  const ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; if(res.known) ids.push("A", "M");
+  const cells = [0, 1, 2, 3].map(() => [[], [], []]);
+  ids.forEach(id => { const s = readSign(lonOf(res, id)); cells[s % 4][s % 3].push(ptLabel(id)); });
+  const rowT = cells.map(r => r.reduce((a, c) => a + c.length, 0));
+  const colT = [0, 1, 2].map(m => cells.reduce((a, r) => a + r[m].length, 0));
+  const top = (arr, names) => { const mx = Math.max(...arr); return names.filter((_, i) => arr[i] === mx).join(" / ") + " (" + mx + ")"; };
+  const box = document.createElement("div"); box.className = "sec";
+  let h = `<h2>${T.dist}</h2><p class="note">${T.distN}</p><div class="tw"><table class="dist"><thead><tr><th></th>${T.mo.map(m => `<th>${m}</th>`).join("")}<th class="tot">Σ</th></tr></thead><tbody>`;
+  cells.forEach((r, e) => {
+    h += `<tr><td>${T.el[e]}</td>${r.map(c => `<td class="g sym">${c.join(" ")}</td>`).join("")}<td class="tot">${rowT[e]}</td></tr>`;
+  });
+  h += `<tr><td class="tot">Σ</td>${colT.map(c => `<td class="tot">${c}</td>`).join("")}<td class="tot">${ids.length}</td></tr></tbody></table></div>`;
+  h += `<p class="note">${T.dom}: ${top(rowT, T.el)} · ${T.domM}: ${top(colT, T.mo)}</p>`;
+  box.innerHTML = h;
+  return box;
+}
+
+function starTable(res, T){
+  const ids = []; for(let i = 0; i < NB; i++){ if(res.lon[i] != null) ids.push(i); } if(res.known) ids.push("A", "M");
+  const name = id => id === "A" ? T.asc : id === "M" ? T.mc : `<span class="sym">${PG[id]}</span> ${T.body[id]}`;
+  const box = document.createElement("div"); box.className = "tw sec";
+  let h = `<h2>${T.stars}</h2><p class="note">${T.starsN}</p><table class="stars"><thead><tr>${T.sth.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`;
+  res.stars.forEach(st => {
+    const cj = ids.map(id => { let d = Math.abs(lonOf(res, id) - st.l) % 360; if(d > 180) d = 360 - d; return {id, d}; })
+      .filter(x => x.d < 1).sort((a, b) => a.d - b.d).map(x => `${name(x.id)} (${deg(x.d)})`);
+    const s = readSign(st.l);
+    h += `<tr${cj.length ? ' class="hit"' : ""}><td>${st.n}</td><td><span class="sym">${SIGN[s]}</span> ${T.sign[s]}</td><td>${deg(st.l)}</td><td>${cj.join(", ") || "–"}</td></tr>`;
+  });
+  box.innerHTML = h + "</tbody></table>";
+  return box;
 }
 
 function render(){
@@ -1019,7 +1210,7 @@ function render(){
   
   const rows = [];
   if(res.known){ rows.push([T.asc, res.h.asc, null, T.ascm, "A"]); rows.push([T.mc, res.h.mc, null, "", "M"]); }
-  res.lon.forEach((l, i) => rows.push([T.body[i], l, res.known ? houseOf(l, res.h.c) : "", i < 5 ? T.mean[i] : "", i, res.rx[i]]));
+  res.lon.forEach((l, i) => { if(l != null) rows.push([T.body[i], l, res.known ? houseOf(l, res.h.c) : "", i < 5 ? T.mean[i] : "", i, res.rx[i]]); });
   
   const q = document.createElement("div");
   q.innerHTML = `<h2>${T.quick}</h2><p class="note" style="margin:2px 0 10px">${T.quickIntro}</p><div class="quick"></div>`;
@@ -1035,7 +1226,13 @@ function render(){
   tb.innerHTML = `<h2>${T.full}</h2><table><thead><tr>${T.th.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr><td>${typeof r[4] == "number" ? `<span class="sym" style="color:var(--amber)">${PG[r[4]]}</span> ` : ""}${r[0]}</td><td><span class="sym">${SIGN[readSign(r[1])]}</span> ${T.sign[readSign(r[1])]}</td><td>${deg(r[1])}${r[5] ? " ℞" : ""}</td><td>${r[2] || ""}</td></tr>`).join("")}</tbody></table>`;
   box.appendChild(tb);
   
-  const n = document.createElement("p"); n.className = "note"; n.textContent = (res.known ? "" : T.untime + " ") + T.rx + ". " + T.note; box.appendChild(n);
+  box.appendChild(aspectGrid(res, T));
+  box.appendChild(distribution(res, T));
+  box.appendChild(starTable(res, T));
+
+  const n = document.createElement("p"); n.className = "note";
+  n.textContent = (res.known ? "" : T.untime + " ") + T.rx + ". " + T.note + (res.known ? " " + T.hsn[res.sys] + "." : "") + (res.ext && res.known ? " " + T.fort : "");
+  box.appendChild(n);
   $("b1").onclick = () => save(false); $("b2").onclick = () => save(true);
 }
 
@@ -1062,12 +1259,12 @@ function tipHTML(key){
     return head(pl(i), su) + b;
   }
   if(k === "s"){
-    const i = +q[1], inn = res.lon.map((l, j) => readSign(l) === i ? j : -1).filter(j => j >= 0);
+    const i = +q[1], inn = res.lon.map((l, j) => l != null && readSign(l) === i ? j : -1).filter(j => j >= 0);
     return head(`<span class="sym">${SIGN[i]}</span> ${T.sign[i]}`, `${T.el[i % 4]} · ${T.mo[i % 3]}`)
       + `<p>${T.eld[i % 4]}</p><p>${T.mod[i % 3]}</p><p><b>${T.typ}</b> ${T.kw[i]}.</p><p><b>${T.here}</b> ${list(inn)}</p>`;
   }
   if(k === "h" && cu){
-    const n = +q[1], inn = res.lon.map((l, j) => houseOf(l, cu) === n ? j : -1).filter(j => j >= 0);
+    const n = +q[1], inn = res.lon.map((l, j) => l != null && houseOf(l, cu) === n ? j : -1).filter(j => j >= 0);
     return head(T.hn(n), `${T.starts} ${sg(cu[n - 1])}`) + `<p>${T.hs[n - 1]}</p><p><b>${T.hereH}</b> ${list(inn)}</p>`;
   }
   if(k === "x" && res.known){
@@ -1077,7 +1274,7 @@ function tipHTML(key){
   if(k === "a"){
     const nameOf = v => v === "A" ? T.asc : v === "M" ? T.mc : pl(+v), ti = +q[3];
     const orb = lang === "fi" ? q[4].replace(".", ",") : q[4];
-    return head(`${T.an[ti]} (${[60, 90, 120, 180][ti]}°)`, `${nameOf(q[1])} – ${nameOf(q[2])}`)
+    return head(`${T.an[ti]} (${ASPT[ti][0]}°)`, `${nameOf(q[1])} – ${nameOf(q[2])}`)
       + `<p>${T.ad[ti]}</p><p class="dim">${T.orbL}: ${orb}°</p>`;
   }
   return "";
@@ -1097,7 +1294,7 @@ function showTip(node, x, y, pin){
   placeTip(x, y);
 }
 function hideTip(){ tipEl.classList.remove("on", "pin"); pinned = false; }
-const tipNode = e => { const n = e.target.closest && e.target.closest("[data-tip]"); return n && n.closest(".chart") ? n : null; };
+const tipNode = e => { const n = e.target.closest && e.target.closest("[data-tip]"); return n && n.closest(".chart,.at") ? n : null; };
 const nodeXY = n => { const r = n.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
 
 document.addEventListener("pointerover", e => {
@@ -1176,6 +1373,18 @@ window.addEventListener("DOMContentLoaded", () => {
   const r = calc();
   if(r){ window.RES = r; render(); }
 });
+
+(() => {
+  const f = document.getElementById("f");
+  const map = {d:"hDate", tm:"hTime", unk:"hTime", c:"hint", p:"hint", man:"hMan", hs:"hHs", asp:"hHs", ext:"hExt"};
+  const show = on => e => {
+    const k = map[e.target.id]; if (!k) return;
+    f.querySelectorAll('.help').forEach(h => h.classList.remove("show"));
+    if (on) { const h = f.querySelector('.help[data-t="' + k + '"]'); if (h) h.classList.add("show"); }
+  };
+  f.addEventListener("focusin", show(true));
+  f.addEventListener("focusout", show(false));
+})();
 </script>
 </body>
 </html>
