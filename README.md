@@ -26,7 +26,7 @@ Enter your date, time and place of birth to see an astrological map of the sky a
 
 Birth Chart calculates everything entirely client-side in your browser. **No APIs, no servers, and no internet connection are required**, and your birth details never leave your device.
 
-- **Planetary Positions:** Powered by [Astronomy Engine](https://github.com/cosinekitty/astronomy) by Don Cross, with sub-arcminute accuracy.
+- **Planetary Positions:** Powered by [Astronomy Engine](https://github.com/cosinekitty/astronomy) by Don Cross.
 - **Houses:** Placidus house system, with the ascendant and midheaven calculated from the time and place of birth.
 - **Lunar Node:** The true North Node.
 - **Time Zones:** Local birth time is converted to universal time using the selected IANA time zone.
