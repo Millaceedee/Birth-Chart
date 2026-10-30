@@ -68,7 +68,7 @@ label{display:grid;gap:3px;font-size:14px;color:var(--dim)}
 input,select{background:#0e0817;border:1px solid #3d2a5e;border-radius:2px;padding:8px 10px;width:100%;color-scheme:dark}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.chk{display:flex;gap:8px;align-items:center;font-size:14px}.chk input{width:auto}
+.chk{display:flex;gap:10px;align-items:center;font-size:14px;cursor:pointer;user-select:none}.chk input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:18px;height:18px;background:#0e0817;border:1px solid #3d2a5e;border-radius:2px;outline:none;cursor:pointer;display:grid;place-content:center;margin:0;transition:all .2s ease}.chk input[type="checkbox"]::before{content:"";width:10px;height:5px;border-left:2px solid #14040c;border-bottom:2px solid #14040c;transform:rotate(-45deg) scale(0);transition:transform .15s ease-in-out;margin-top:-1px}.chk input[type="checkbox"]:checked{background:var(--rose);border-color:var(--rose)}.chk input[type="checkbox"]:checked::before{transform:rotate(-45deg) scale(1)}.chk input[type="checkbox"]:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
 .hint{font-size:13px;color:var(--dim);font-style:italic}
 .pw{position:relative}
 #sug{position:absolute;z-index:5;left:0;right:0;top:100%;background:#120a1e;border:1px solid var(--rose);list-style:none;padding:0;max-height:220px;overflow:auto}

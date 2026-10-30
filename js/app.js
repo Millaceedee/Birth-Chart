@@ -589,7 +589,8 @@ function draw(res){
   }
 
   // Aspect lines (conjunctions are not drawn). Minor aspects are thinner and dashed.
-  const pts = res.lon.slice(0, 10).map((l, i) => ({l, i}));
+  // Aspect lines: Sun-Pluto, Vertex, Chiron and the four asteroids (nodes, Lilith and Fortune stay in the grid only).
+  const pts = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 17, 18, 19].filter(i => res.lon[i] != null).map(i => ({l: res.lon[i], i}));
   if(res.known){
     pts.push({l: res.h.asc, i: "A"}, {l: res.h.mc, i: "M"});
   }
@@ -599,7 +600,8 @@ function draw(res){
       const f = aspectRes(res, pts[i].i, pts[j].i, res.asp === "major");
       if(!f || f.ai === 0) continue;
       const [angle, orb, color, , minor] = ASPT[f.ai];
-      const at = {stroke: color, "stroke-width": minor ? 0.9 : 1.3, opacity: minor ? 0.65 : 0.85, class: "asp"};
+      const extra = pts[i].i >= 10 || pts[j].i >= 10;   // lines to Vertex, Chiron and asteroids are a little lighter to keep the wheel readable
+      const at = {stroke: color, "stroke-width": minor ? 0.9 : extra ? 1 : 1.3, opacity: minor ? 0.65 : extra ? 0.6 : 0.85, class: "asp"};
       if(minor) at["stroke-dasharray"] = "4 3";
       g.appendChild(line(pts[i].l, RI - 1, pts[j].l, RI - 1, at));
       g.appendChild(line(
