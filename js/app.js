@@ -9,6 +9,7 @@ class AstroCalc {
   }
   #date(jd) { return new Date((jd - 2440587.5) * 864e5); }
   #lon(jd, pl) {
+    if (pl >= 15) return this.#minorLon(jd, pl);
     const date = this.#date(jd), AE = Astronomy;
     if (pl === 10) { 
       const d = 0.02, ec = j => AE.Ecliptic(AE.GeoMoon(this.#date(j))).vec;
@@ -23,8 +24,56 @@ class AstroCalc {
   }
   calc_ut(jd, pl) {
     const a = this.#lon(jd, pl), b = this.#lon(jd + 0.01, pl);
+    if (a == null || b == null) return null;   // only Chiron/asteroids: outside the 1800-2100 table
     let sp = ((b - a + 540) % 360 - 180) / 0.01;
     return [a, 0, 1, sp, 0, 0];
+  }
+  // Chiron (15), Ceres (16), Pallas (17), Juno (18), Vesta (19): offline table in js/ephemeris.js
+  // (JPL Horizons, heliocentric J2000 ecliptic, 16-day samples). null when the table or the date is missing.
+  #tabs = {};
+  #table(pl) {
+    const E = window.EPH, key = E && E.names[pl - 15];
+    if (!key) return null;
+    if (this.#tabs[key] === undefined) {
+      const b64 = E.data[key];
+      if (!b64) this.#tabs[key] = null;
+      else {
+        const bin = atob(b64), n = bin.length / 4, dv = new DataView(new ArrayBuffer(bin.length)), v = new Int32Array(n);
+        for (let i = 0; i < bin.length; i++) dv.setUint8(i, bin.charCodeAt(i));
+        for (let i = 0; i < n; i++) v[i] = dv.getInt32(i * 4, true);
+        this.#tabs[key] = v;
+      }
+    }
+    return this.#tabs[key];
+  }
+  // 8-point Lagrange interpolation of the heliocentric position (AU).
+  #minorPos(jd, pl) {
+    const v = this.#table(pl); if (!v) return null;
+    const E = window.EPH, np = v.length / 3, k = (jd - E.jd0) / E.step;
+    if (!(k >= 0 && k <= np - 1)) return null;
+    const i0 = Math.max(0, Math.min(np - 8, Math.floor(k) - 3)), p = [0, 0, 0];
+    for (let j = 0; j < 8; j++) {
+      let w = 1;
+      for (let m = 0; m < 8; m++) if (m !== j) w *= (k - (i0 + m)) / (j - m);
+      const o = 3 * (i0 + j);
+      p[0] += w * v[o]; p[1] += w * v[o + 1]; p[2] += w * v[o + 2];
+    }
+    return [p[0] * E.scale, p[1] * E.scale, p[2] * E.scale];
+  }
+  // Apparent geocentric ecliptic longitude, true equinox of date (light-time and annual aberration included, like GeoVector).
+  #minorLon(jd, pl) {
+    const AE = Astronomy, t = AE.MakeTime(this.#date(jd)), C = 173.1446326846693;   // speed of light, AU/day
+    const toEcl = AE.Rotation_EQJ_ECL(), es = AE.HelioState(AE.Body.Earth, t);
+    const e = AE.RotateVector(toEcl, {x: es.x, y: es.y, z: es.z, t});
+    const ev = AE.RotateVector(toEcl, {x: es.vx, y: es.vy, z: es.vz, t});
+    let tau = 0, g = null, d = 0;
+    for (let it = 0; it < 4; it++) {
+      const p = this.#minorPos(jd - tau, pl); if (!p) return null;
+      g = [p[0] - e.x, p[1] - e.y, p[2] - e.z]; d = Math.hypot(g[0], g[1], g[2]); tau = d / C;
+    }
+    const u = [g[0] / d + ev.x / C, g[1] / d + ev.y / C, g[2] / d + ev.z / C], un = Math.hypot(u[0], u[1], u[2]);
+    const q = AE.RotateVector(AE.Rotation_EQJ_ECT(t), AE.RotateVector(AE.Rotation_ECL_EQJ(), {x: u[0] / un, y: u[1] / un, z: u[2] / un, t}));
+    return ((Math.atan2(q.y, q.x) * 180 / Math.PI) % 360 + 360) % 360;
   }
   // Mean lunar apogee ("Black Moon Lilith"), true equinox of date.
   meanApogee(jd) {
@@ -176,8 +225,8 @@ function resolveTz(place, y, m, d){
 
 const SIGN=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map(s=>s+"\uFE0E");
 // Bodies 0-10: Sun..Pluto, North Node. Extras: 11 Lilith, 12 South Node, 13 Part of Fortune, 14 Vertex.
-const PG=["\u2609","\u263D","\u263F","\u2640","\u2642","\u2643","\u2644","\u2645","\u2646","\u2647","\u260A","\u26B8","\u260B","\u2297"].map(s=>s+"\uFE0E").concat(["Vx"]);
-const NB=15, XT=[11,12,13,14];
+const PG=["\u2609","\u263D","\u263F","\u2640","\u2642","\u2643","\u2644","\u2645","\u2646","\u2647","\u260A","\u26B8","\u260B","\u2297"].map(s=>s+"\uFE0E").concat(["Vx"], ["\u26B7","\u26B3","\u26B4","\u26B5","\u26B6"].map(s=>s+"\uFE0E"));
+const NB=20, XT=[11,12,13,14,15,16,17,18,19];   // 15 Chiron, 16 Ceres, 17 Pallas, 18 Juno, 19 Vesta (js/ephemeris.js)
 // Aspects: [angle, orb, colour, symbol, minor]
 const ASPT=[
 [0,8,"#e0b866","\u260C\uFE0E",0],
@@ -206,10 +255,10 @@ kw:["rohkea ja välitön","vakaa ja aistillinen","utelias ja vaihteleva","suojaa
 body:["Aurinko","Kuu","Merkurius","Venus","Mars","Jupiter","Saturnus","Uranus","Neptunus","Pluto","Pohjoinen solmu","Lilith (keskimääräinen)","Eteläinen solmu","Fortuna-piste","Vertex"],asc:"Nousumerkki",mc:"Keskitaivas (MC)",
 mean:["Perusluonne ja elämänvoima","Tunteet ja turvan tarve","Ajattelu ja puhetapa","Rakkaus ja arvot","Tahto ja toimintatapa"],ascm:"Ulospäin näkyvä olemus",
 th:["Kohde","Merkki","Aste","Talo"],house:"Talo",asp:"Aspektit",quick:"Pikatulkinnat",full:"Kaikki sijainnit",svg:"Tallenna SVG",png:"Tallenna PNG",
-note:"Laskenta: astronomy-engine (tarkkuus alle 1 kaariminuutti), todellinen solmu, keskimääräinen Lilith.",fort:"Fortuna-piste vaihtaa laskukaavaa yösyntymillä.",
+note:"Laskenta: astronomy-engine (tarkkuus alle 1 kaariminuutti), todellinen solmu, keskimääräinen Lilith. Chiron, Ceres, Pallas, Juno ja Vesta: NASA/JPL Horizons -data (vuodet 1800–2100).",fort:"Fortuna-piste vaihtaa laskukaavaa yösyntymillä.",
 hsys:"Talojärjestelmä",hsW:"Whole Sign (kokonaiset merkit)",hsE:"Equal (tasatalot)",hHs:"Talojärjestelmä määrää, mistä kohdasta talot alkavat. Placidus on yleisin; Whole Sign tekee jokaisesta merkistä yhden talon.",
 hsn:{P:"Placidus-talot",K:"Koch-talot",W:"Whole Sign -talot",E:"Equal-talot"},
-aspm:"Aspektit",aspAll:"Pää- ja sivuaspektit",aspMaj:"Vain pääaspektit",ext:"Näytä lisäpisteet (Lilith, eteläinen solmu, Fortuna, Vertex)",hExt:"Fortuna ja Vertex vaativat tarkan kellonajan.",
+aspm:"Aspektit",aspAll:"Pää- ja sivuaspektit",aspMaj:"Vain pääaspektit",ext:"Näytä lisäpisteet (Lilith, eteläinen solmu, Fortuna, Vertex, Chiron, Ceres, Pallas, Juno, Vesta)",hExt:"Fortuna ja Vertex vaativat tarkan kellonajan.",
 aspT:"Aspektitaulukko",aspN:"Vihreä = sujuva, punainen = jännite, violetti = hienovarainen, kulta = konjunktio. Napauta tai vie hiiri ruudun päälle nähdäksesi selityksen.",
 dist:"Alkuaineet ja ominaisuudet",distN:"Mukana Aurinko–Pluto sekä, jos kellonaika on tiedossa, nousumerkki ja MC.",dom:"Vallitseva alkuaine",domM:"Vallitseva ominaisuus",
 stars:"Kiinteät tähdet",starsN:"Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Konjunktio = alle 1° päässä planeetasta, pisteestä tai akselista.",sth:["Tähti","Merkki","Aste","Konjunktio"],untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
@@ -261,10 +310,10 @@ kw:["bold and direct","steady and sensual","curious and changeable","protective 
 body:["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","North Node","Lilith (mean apogee)","South Node","Part of Fortune","Vertex"],asc:"Ascendant",mc:"Midheaven (MC)",
 mean:["Core self and vitality","Emotions and need for safety","Thinking and speech","Love and values","Will and drive"],ascm:"The face you show the world",
 th:["Body","Sign","Degree","House"],house:"House",asp:"Aspects",quick:"Quick readings",full:"All positions",svg:"Save SVG",png:"Save PNG",
-note:"Calculated with astronomy-engine (sub-arcminute accuracy), true node, mean Lilith.",fort:"The Part of Fortune switches its formula for night births.",
+note:"Calculated with astronomy-engine (sub-arcminute accuracy), true node, mean Lilith. Chiron, Ceres, Pallas, Juno and Vesta: NASA/JPL Horizons data (years 1800–2100).",fort:"The Part of Fortune switches its formula for night births.",
 hsys:"House system",hsW:"Whole Sign",hsE:"Equal",hHs:"The house system decides where the houses begin. Placidus is the most common; Whole Sign makes each sign one house.",
 hsn:{P:"Placidus houses",K:"Koch houses",W:"Whole Sign houses",E:"Equal houses"},
-aspm:"Aspects",aspAll:"Major and minor aspects",aspMaj:"Major aspects only",ext:"Show extra points (Lilith, South Node, Fortune, Vertex)",hExt:"Fortune and Vertex need an exact birth time.",
+aspm:"Aspects",aspAll:"Major and minor aspects",aspMaj:"Major aspects only",ext:"Show extra points (Lilith, South Node, Fortune, Vertex, Chiron, Ceres, Pallas, Juno, Vesta)",hExt:"Fortune and Vertex need an exact birth time.",
 aspT:"Aspect grid",aspN:"Green = flowing, red = tension, violet = subtle, gold = conjunction. Tap or hover a cell for an explanation.",
 dist:"Elements and modalities",distN:"Includes Sun to Pluto and, if the birth time is known, the ascendant and MC.",dom:"Dominant element",domM:"Dominant modality",
 stars:"Fixed stars",starsN:"Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Conjunct = within 1° of a planet, point or axis.",sth:["Star","Sign","Degree","Conjunct"],untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
@@ -309,7 +358,8 @@ D:"Opposite the ascendant, on the right edge of the chart. Describes what you lo
 M:"The highest point of the chart. Describes career, goals and public role.",
 I:"The lowest point of the chart. Describes home, roots and your private inner life."}}};
 
-Object.assign(L.fi, INTERP.fi); Object.assign(L.en, INTERP.en);   // js/interp.js: extra interpretations and notices
+Object.assign(L.fi, INTERP.fi); Object.assign(L.en, INTERP.en);
+["fi", "en"].forEach(k => ["body", "pd", "pf"].forEach(f => L[k][f].push(...MINOR[k][f])));   // js/minor.js: Chiron and asteroids   // js/interp.js: extra interpretations and notices
 
 // Language preference is stored under the existing, explicitly requested key.
 // Everything lives under the one existing key "birthchart_store" as JSON: {lang, d, tm, unk, cc, place, man, la, lo, tz}.
@@ -659,8 +709,8 @@ function draw(res){
 
 function readSign(l){ return Math.floor(l / 30); }
 // Finds the aspect between two longitudes: {ai: index into ASPT, off: distance from exact angle} or null.
-// Orb factor per body id (0-14): luminaries get wider orbs, slow outer planets and calculated points narrower ones.
-const BF = [1.25, 1.25, 1, 1, 1, .85, .85, .7, .7, .7, .6, .5, .6, .5, .5];
+// Orb factor per body id (0-19): luminaries get wider orbs, slow outer planets and calculated points narrower ones.
+const BF = [1.25, 1.25, 1, 1, 1, .85, .85, .7, .7, .7, .6, .5, .6, .5, .5, .6, .5, .5, .5, .5];
 const bfOf = id => (id === "A" || id === "M") ? 1 : BF[id];
 // Finds the aspect between two longitudes: {ai: index into ASPT, off: distance from exact angle} or null. fa, fb scale the orb.
 function aspectOf(a, b, majorOnly, fa = 1, fb = 1){
@@ -731,6 +781,11 @@ function calc(){
   lon[13] = lon[14] = null;
   for(let i = 11; i < NB; i++) rx.push(false);
   sp[11] = 0.1114; sp[12] = sp[10]; sp[13] = sp[14] = null;   // mean apogee moves ~0.111 deg/day; Fortune and Vertex have no useful speed
+  // Chiron and the four large asteroids (15-19). Left out (null) outside the 1800-2100 table.
+  for(let i = 15; i < NB; i++){
+    const r = ext ? ast.calc_ut(jdUT, i) : null;
+    lon[i] = r ? nm(r[0]) : null; sp[i] = r ? r[3] : null; rx[i] = !!r && r[3] < 0;
+  }
 
   let housesRes = null;
   if(known){

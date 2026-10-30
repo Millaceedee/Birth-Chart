@@ -19,3 +19,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+THIRD-PARTY NOTICES
+
+The MIT License above covers the original code of this project. The following
+third-party material is used and is not covered by the copyright line above.
+
+1. NASA/JPL Horizons data
+
+   The orbital positions of Chiron (2060), Ceres (1), Pallas (2), Juno (3) and
+   Vesta (4) in js/ephemeris.js were generated with tools/build_ephemeris.py
+   from data provided by the Solar System Dynamics group of the Jet Propulsion
+   Laboratory (JPL), California Institute of Technology, for NASA:
+
+       JPL Horizons On-Line Ephemeris System
+       https://ssd.jpl.nasa.gov/horizons/
+
+   Data produced by NASA/JPL is used here with acknowledgement of the source.
+   NASA and JPL do not endorse or sponsor this project, and their names must
+   not be used to suggest that they do. The data is provided without warranty;
+   the values in js/ephemeris.js are resampled and rounded versions of the
+   Horizons output.
+
+2. Astronomy Engine (js/astronomy.js)
+
+   Copyright (c) 2019-2023 Don Cross <cosinekitty@gmail.com>
+   https://github.com/cosinekitty/astronomy
+   Licensed under the MIT License; the full notice is kept in the header of
+   js/astronomy.js and must be retained when redistributing that file.
