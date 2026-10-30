@@ -1,4 +1,5 @@
-class SwissEph {
+// Calculation adapter on top of Astronomy Engine (not Swiss Ephemeris; the API shape is only similar).
+class AstroCalc {
   SEFLG_SPEED = 256;
   julday(y, m, d, h) {
     let y1 = y, m1 = m;
@@ -81,7 +82,7 @@ class SwissEph {
       cusp[2] = ascAt(ramc + 30 + ad3, phi);
       cusp[3] = ascAt(ramc + 60 + 2 * ad3, phi);
     };
-    let ok = Math.abs(lat) < 90 - eps / R - 0.01;
+    let ok = Math.abs(lat) < 90 - eps / R - 0.01, polar = false;
     if (sys === "W") {
       const b = Math.floor(asc / 30) * 30;
       for (let i = 1; i <= 12; i++) cusp[i] = nm(b + 30 * (i - 1));
@@ -89,31 +90,33 @@ class SwissEph {
       for (let i = 1; i <= 12; i++) cusp[i] = nm(asc + 30 * (i - 1));
     } else {
       cusp[1] = asc; cusp[10] = mcF; cusp[4] = nm(mcF + 180); cusp[7] = nm(asc + 180);
+      const porph = () => { // Porphyry: each quadrant divided into three equal parts
+        const q = nm(cusp[4] - asc);
+        cusp[2] = nm(asc + q / 3); cusp[3] = nm(asc + 2 * q / 3);
+        const q2 = nm(asc - mcF);
+        cusp[11] = nm(mcF + q2 / 3); cusp[12] = nm(mcF + 2 * q2 / 3);
+        polar = true;
+      };
       if (ok && sys === "K") {
         koch();
       } else if (ok) {
         cusp[11] = pl(11); cusp[12] = pl(12); cusp[2] = pl(2); cusp[3] = pl(3);
-      } else { // polar regions: Porphyry
-        const q = nm(cusp[4] - asc) ;
-        cusp[2] = nm(asc + q / 3); cusp[3] = nm(asc + 2 * q / 3);
-        const q2 = nm(asc - mcF);
-        cusp[11] = nm(mcF + q2 / 3); cusp[12] = nm(mcF + 2 * q2 / 3);
       }
+      if (!ok || [11, 12, 2, 3].some(i => !isFinite(cusp[i]))) porph(); // polar regions or a failed iteration
       cusp[5] = nm(cusp[11] + 180); cusp[6] = nm(cusp[12] + 180);
       cusp[8] = nm(cusp[2] + 180); cusp[9] = nm(cusp[3] + 180);
     }
     // Vertex: where the prime vertical meets the ecliptic in the west (between IC and MC, via the Descendant).
     let vx = ascAt(ramc + 180, (90 - lat) * R);
     if (nm(vx - (mcF + 180)) > 180) vx = nm(vx + 180);
-    return { cusps: cusp, ascmc: new Float64Array([asc, mcF, ramc, vx]) };
+    return { cusps: cusp, ascmc: new Float64Array([asc, mcF, ramc, vx]), polar };
   }
 }
 
-const swe = new SwissEph();
-const sweReady = true;
+const ast = new AstroCalc();
 setTimeout(() => { const r = calc(); if(r){ window.RES = r; render(); } }, 0);
 
-const DB=`FI|Europe/Helsinki|Suomi|Finland|Helsinki,60.17,24.94;Espoo,60.21,24.66;Vantaa,60.29,25.04;Tampere,61.50,23.76;Turku,60.45,22.27;Oulu,65.01,25.47;Jyväskylä,62.24,25.75;Lahti,60.98,25.66;Kuopio,62.89,27.68;Pori,61.49,21.80;Kouvola,60.87,26.70;Joensuu,62.60,29.76;Lappeenranta,61.06,28.19;Vaasa,63.10,21.62;Rovaniemi,66.50,25.73;Seinäjoki,62.79,22.84;Mikkeli,61.69,27.27;Kotka,60.47,26.95;Porvoo,60.39,25.66;Kokkola,63.84,23.13;Hämeenlinna,60.99,24.46;Rauma,61.13,21.51;Kajaani,64.23,27.73;Savonlinna,61.87,28.88;Kemi,65.74,24.56;Tornio,65.85,24.15;Raahe,64.69,24.48;Salo,60.38,23.13;Hyvinkää,60.63,24.86;Järvenpää,60.47,25.09;Kerava,60.40,25.10;Nokia,61.48,23.51;Lohja,60.25,24.07;Mariehamn,60.10,19.94;Ivalo,68.66,27.54;Kuusamo,65.97,29.19;Sodankylä,67.42,26.59;Kemijärvi,66.71,27.43;Imatra,61.17,28.77;Iisalmi,63.56,27.19;Heinola,61.20,26.04
+const DB=`FI|Europe/Helsinki|Suomi|Finland|Helsinki,60.17,24.94;Espoo,60.21,24.66;Vantaa,60.29,25.04;Tampere,61.50,23.76;Turku,60.45,22.27;Oulu,65.01,25.47;Jyväskylä,62.24,25.75;Lahti,60.98,25.66;Kuopio,62.89,27.68;Pori,61.49,21.80;Kouvola,60.87,26.70;Joensuu,62.60,29.76;Lappeenranta,61.06,28.19;Vaasa,63.10,21.62;Rovaniemi,66.50,25.73;Seinäjoki,62.79,22.84;Mikkeli,61.69,27.27;Kotka,60.47,26.95;Kemijärvi,66.71,27.43;Kittilä,67.65,24.91;Sodankylä,67.42,26.59;Ivalo,68.66,27.54;Porvoo,60.39,25.66;Kokkola,63.84,23.13;Hämeenlinna,60.99,24.46;Rauma,61.13,21.51;Kajaani,64.23,27.73;Savonlinna,61.87,28.88;Kemi,65.74,24.56;Tornio,65.85,24.15;Raahe,64.69,24.48;Salo,60.38,23.13;Hyvinkää,60.63,24.86;Järvenpää,60.47,25.09;Kerava,60.40,25.10;Nokia,61.48,23.51;Lohja,60.25,24.07;Mariehamn,60.10,19.94;Ivalo,68.66,27.54;Kuusamo,65.97,29.19;Sodankylä,67.42,26.59;Kemijärvi,66.71,27.43;Imatra,61.17,28.77;Iisalmi,63.56,27.19;Heinola,61.20,26.04
 SE|Europe/Stockholm|Ruotsi|Sweden|Stockholm,59.33,18.07;Göteborg,57.71,11.97;Malmö,55.60,13.00;Uppsala,59.86,17.64;Umeå,63.83,20.26;Luleå,65.58,22.15;Kiruna,67.86,20.23;Västerås,59.61,16.55;Örebro,59.27,15.21;Linköping,58.41,15.62
 NO|Europe/Oslo|Norja|Norway|Oslo,59.91,10.75;Bergen,60.39,5.32;Trondheim,63.43,10.40;Tromsø,69.65,18.96;Stavanger,58.97,5.73
 DK|Europe/Copenhagen|Tanska|Denmark|København,55.68,12.57;Aarhus,56.16,10.20;Odense,55.40,10.39
@@ -136,15 +139,15 @@ CZ|Europe/Prague|Tšekki|Czechia|Praha,50.08,14.44
 HU|Europe/Budapest|Unkari|Hungary|Budapest,47.50,19.04
 GR|Europe/Athens|Kreikka|Greece|Athína,37.98,23.73
 PT|Europe/Lisbon|Portugali|Portugal|Lisboa,38.72,-9.14;Porto,41.15,-8.61
-RU|Europe/Moscow|Venäjä|Russia|Moskva,55.76,37.62;Sankt-Peterburg,59.93,30.34;Viipuri (Vyborg),60.71,28.75;Sortavala,61.70,30.69
+RU|Europe/Moscow|Venäjä|Russia|Moskva,55.76,37.62;Sankt-Peterburg,59.93,30.34;Viipuri (Vyborg),60.71,28.75;Sortavala,61.70,30.69;Käkisalmi (Priozersk),61.04,30.12;Koivisto (Primorsk),60.37,28.60;Petsamo (Pechenga),69.53,31.23;Murmansk,68.97,33.09;Kaliningrad,54.71,20.51,Europe/Kaliningrad;Samara,53.20,50.15,Europe/Samara;Jekaterinburg (Yekaterinburg),56.84,60.61,Asia/Yekaterinburg;Omsk,54.99,73.37,Asia/Omsk;Novosibirsk,55.03,82.92,Asia/Novosibirsk;Krasnojarsk (Krasnoyarsk),56.01,92.85,Asia/Krasnoyarsk;Irkutsk,52.29,104.30,Asia/Irkutsk;Vladivostok,43.12,131.89,Asia/Vladivostok
 UA|Europe/Kyiv|Ukraina|Ukraine|Kyiv,50.45,30.52
 TR|Europe/Istanbul|Turkki|Türkiye|İstanbul,41.01,28.98
-US|America/New_York|Yhdysvallat|United States|New York,40.71,-74.01;Los Angeles,34.05,-118.24,America/Los_Angeles;Chicago,41.88,-87.63,America/Chicago;Houston,29.76,-95.37,America/Chicago;Miami,25.76,-80.19;Seattle,47.61,-122.33,America/Los_Angeles;Denver,39.74,-104.99,America/Denver;Boston,42.36,-71.06;San Francisco,37.77,-122.42,America/Los_Angeles;Atlanta,33.75,-84.39;Minneapolis,44.98,-93.27,America/Chicago;Anchorage,61.22,-149.90,America/Anchorage;Honolulu,21.31,-157.86,Pacific/Honolulu
-CA|America/Toronto|Kanada|Canada|Toronto,43.65,-79.38;Montréal,45.50,-73.57;Vancouver,49.28,-123.12,America/Vancouver
-MX|America/Mexico_City|Meksiko|Mexico|Ciudad de México,19.43,-99.13
-BR|America/Sao_Paulo|Brasilia|Brazil|São Paulo,-23.55,-46.63;Rio de Janeiro,-22.91,-43.17
+US|America/New_York|Yhdysvallat|United States|New York,40.71,-74.01;Los Angeles,34.05,-118.24,America/Los_Angeles;Chicago,41.88,-87.63,America/Chicago;Houston,29.76,-95.37,America/Chicago;Miami,25.76,-80.19;Seattle,47.61,-122.33,America/Los_Angeles;Denver,39.74,-104.99,America/Denver;Boston,42.36,-71.06;San Francisco,37.77,-122.42,America/Los_Angeles;Atlanta,33.75,-84.39;Minneapolis,44.98,-93.27,America/Chicago;Anchorage,61.22,-149.90,America/Anchorage;Honolulu,21.31,-157.86,Pacific/Honolulu;Phoenix,33.45,-112.07,America/Phoenix;Detroit,42.33,-83.05,America/Detroit
+CA|America/Toronto|Kanada|Canada|Toronto,43.65,-79.38;Montréal,45.50,-73.57;Vancouver,49.28,-123.12,America/Vancouver;Ottawa,45.42,-75.70;Calgary,51.05,-114.07,America/Edmonton;Edmonton,53.55,-113.49,America/Edmonton;Winnipeg,49.90,-97.14,America/Winnipeg;Regina,50.45,-104.62,America/Regina;Saskatoon,52.13,-106.67,America/Regina;Halifax,44.65,-63.57,America/Halifax;St. John's,47.56,-52.71,America/St_Johns
+MX|America/Mexico_City|Meksiko|Mexico|Ciudad de México,19.43,-99.13;Guadalajara,20.66,-103.35;Monterrey,25.69,-100.32,America/Monterrey;Tijuana,32.51,-117.04,America/Tijuana;Cancún,21.16,-86.85,America/Cancun;Hermosillo,29.07,-110.96,America/Hermosillo;Chihuahua,28.63,-106.07,America/Chihuahua
+BR|America/Sao_Paulo|Brasilia|Brazil|São Paulo,-23.55,-46.63;Rio de Janeiro,-22.91,-43.17;Brasília,-15.79,-47.88;Porto Alegre,-30.03,-51.23;Salvador,-12.97,-38.50,America/Bahia;Fortaleza,-3.73,-38.53,America/Fortaleza;Recife,-8.05,-34.88,America/Recife;Belém,-1.46,-48.50,America/Belem;Manaus,-3.12,-60.02,America/Manaus;Rio Branco,-9.97,-67.81,America/Rio_Branco
 AR|America/Argentina/Buenos_Aires|Argentiina|Argentina|Buenos Aires,-34.60,-58.38
-AU|Australia/Sydney|Australia|Australia|Sydney,-33.87,151.21;Melbourne,-37.81,144.96,Australia/Melbourne;Brisbane,-27.47,153.03,Australia/Brisbane;Perth,-31.95,115.86,Australia/Perth
+AU|Australia/Sydney|Australia|Australia|Sydney,-33.87,151.21;Melbourne,-37.81,144.96,Australia/Melbourne;Brisbane,-27.47,153.03,Australia/Brisbane;Perth,-31.95,115.86,Australia/Perth;Canberra,-35.28,149.13;Adelaide,-34.93,138.60,Australia/Adelaide;Darwin,-12.46,130.84,Australia/Darwin;Hobart,-42.88,147.33,Australia/Hobart
 NZ|Pacific/Auckland|Uusi-Seelanti|New Zealand|Auckland,-36.85,174.76
 JP|Asia/Tokyo|Japani|Japan|Tokyo,35.68,139.69
 CN|Asia/Shanghai|Kiina|China|Beijing,39.90,116.41;Shanghai,31.23,121.47
@@ -156,6 +159,20 @@ ZA|Africa/Johannesburg|Etelä-Afrikka|South Africa|Johannesburg,-26.20,28.05;Cap
 EG|Africa/Cairo|Egypti|Egypt|Kairo,30.04,31.24
 IL|Asia/Jerusalem|Israel|Israel|Jerusalem,31.77,35.22;Tel Aviv,32.09,34.78
 AE|Asia/Dubai|Arabiemiraatit|United Arab Emirates|Dubai,25.20,55.27`.split("\n").map(l=>{const[a,tz,fi,en,cs]=l.split("|");return{cc:a,fi,en,cs:cs.split(";").map(s=>{const p=s.split(",");return{n:p[0],lat:+p[1],lon:+p[2],tz:p[3]||tz}})}});
+
+// Places that belonged to Finland at some time: the clock followed Finnish time within these date ranges (YYYYMMDD, inclusive).
+const HISTFI = {
+  "Viipuri (Vyborg)": [[0, 19400313], [19410831, 19440620]],
+  "Käkisalmi (Priozersk)": [[0, 19400313], [19410831, 19440620]],
+  "Koivisto (Primorsk)": [[0, 19400313], [19410831, 19440620]],
+  "Sortavala": [[0, 19400313], [19410831, 19440919]],
+  "Petsamo (Pechenga)": [[19201014, 19440919]]
+};
+function resolveTz(place, y, m, d){
+  const w = HISTFI[place.n], ymd = y * 10000 + m * 100 + d;
+  if(w && w.some(r => ymd >= r[0] && ymd <= r[1])) return {tz: "Europe/Helsinki", hist: true};
+  return {tz: place.tz, hist: false};
+}
 
 const SIGN=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map(s=>s+"\uFE0E");
 // Bodies 0-10: Sun..Pluto, North Node. Extras: 11 Lilith, 12 South Node, 13 Part of Fortune, 14 Vertex.
@@ -292,6 +309,8 @@ D:"Opposite the ascendant, on the right edge of the chart. Describes what you lo
 M:"The highest point of the chart. Describes career, goals and public role.",
 I:"The lowest point of the chart. Describes home, roots and your private inner life."}}};
 
+Object.assign(L.fi, INTERP.fi); Object.assign(L.en, INTERP.en);   // js/interp.js: extra interpretations and notices
+
 // Language preference is stored under the existing, explicitly requested key.
 // Everything lives under the one existing key "birthchart_store" as JSON: {lang, d, tm, unk, cc, place, man, la, lo, tz}.
 // Older versions stored just "fi" or "en" there; that is still read.
@@ -303,6 +322,9 @@ let lang=store.lang==="fi"?"fi":"en";
 const $=id=>document.getElementById(id),t=k=>L[lang][k];
 
 const R=Math.PI/180,nm=x=>((x%360)+360)%360;
+let userSubmitted=false;
+const fmtN=(x,n)=>lang==="fi"?x.toFixed(n).replace(".",","):x.toFixed(n);
+const offStr=m=>"UTC"+(m<0?"\u2212":"+")+Math.floor(Math.abs(m)/60)+(Math.abs(m)%60?":"+String(Math.abs(m)%60).padStart(2,"0"):"");
 
 function tzOff(ms, tz){
   const p = {};
@@ -524,7 +546,7 @@ function draw(res){
 
   for(let i = 0; i < pts.length; i++){
     for(let j = i + 1; j < pts.length; j++){
-      const f = aspectOf(pts[i].l, pts[j].l, res.asp === "major");
+      const f = aspectRes(res, pts[i].i, pts[j].i, res.asp === "major");
       if(!f || f.ai === 0) continue;
       const [angle, orb, color, , minor] = ASPT[f.ai];
       const at = {stroke: color, "stroke-width": minor ? 0.9 : 1.3, opacity: minor ? 0.65 : 0.85, class: "asp"};
@@ -533,7 +555,7 @@ function draw(res){
       g.appendChild(line(
         pts[i].l, RI - 1, pts[j].l, RI - 1,
         {stroke: "transparent", "stroke-width": 12, class: "hit",
-         "data-tip": "a|" + pts[i].i + "|" + pts[j].i + "|" + f.ai + "|" + f.off.toFixed(1)}
+         "data-tip": "a|" + pts[i].i + "|" + pts[j].i + "|" + f.ai + "|" + f.off.toFixed(1) + "|" + f.ap}
       ));
     }
   }
@@ -637,15 +659,34 @@ function draw(res){
 
 function readSign(l){ return Math.floor(l / 30); }
 // Finds the aspect between two longitudes: {ai: index into ASPT, off: distance from exact angle} or null.
-function aspectOf(a, b, majorOnly){
+// Orb factor per body id (0-14): luminaries get wider orbs, slow outer planets and calculated points narrower ones.
+const BF = [1.25, 1.25, 1, 1, 1, .85, .85, .7, .7, .7, .6, .5, .6, .5, .5];
+const bfOf = id => (id === "A" || id === "M") ? 1 : BF[id];
+// Finds the aspect between two longitudes: {ai: index into ASPT, off: distance from exact angle} or null. fa, fb scale the orb.
+function aspectOf(a, b, majorOnly, fa = 1, fb = 1){
   let d = Math.abs(a - b) % 360;
   if(d > 180) d = 360 - d;
+  const k = (fa + fb) / 2;
   for(let ai = 0; ai < ASPT.length; ai++){
     if(majorOnly && ASPT[ai][4]) continue;
     const off = Math.abs(d - ASPT[ai][0]);
-    if(off <= ASPT[ai][1]) return {ai, off};
+    if(off <= ASPT[ai][1] * k) return {ai, off};
   }
   return null;
+}
+const spOf = (res, id) => (id === "A" || id === "M") ? null : res.sp[id];
+// Aspect between two chart points (ids as in chartPoints). ap: 1 applying, 0 separating, null unknown (axes, Fortune, Vertex).
+function aspectRes(res, ia, ib, majorOnly){
+  const a = lonOf(res, ia), b = lonOf(res, ib), f = aspectOf(a, b, majorOnly, bfOf(ia), bfOf(ib));
+  if(!f) return null;
+  f.ap = null;
+  const sa = spOf(res, ia), sb = spOf(res, ib);
+  if(sa != null && sb != null){
+    let dd = nm(b - a); if(dd > 180) dd -= 360;
+    const e = Math.abs(dd) - ASPT[f.ai][0], de = Math.sign(dd) * (sb - sa);
+    if(Math.abs(e) > 0.005 && de !== 0) f.ap = e * de < 0 ? 1 : 0;
+  }
+  return f;
 }
 function houseOf(l, cu){
   for(let i = 0; i < 12; i++){
@@ -669,31 +710,36 @@ function calc(){
     place = cur;
   }
   const [y, m, d] = dv.split("-").map(Number), known = !$("unk").checked, [H, M] = known ? ($("tm").value || "12:00").split(":").map(Number) : [12, 0];
-  const u = new Date(toUTC(y, m, d, H, M, place.tz));
-  const jdUT = swe.julday(u.getUTCFullYear(), u.getUTCMonth() + 1, u.getUTCDate(), u.getUTCHours() + u.getUTCMinutes() / 60);
+  const tzr = resolveTz(place, y, m, d);
+  const u = new Date(toUTC(y, m, d, H, M, tzr.tz));
+  const offMin = tzOff(u.getTime(), tzr.tz);
+  const jdUT = ast.julday(u.getUTCFullYear(), u.getUTCMonth() + 1, u.getUTCDate(), u.getUTCHours() + u.getUTCMinutes() / 60);
 
   const lon = [];
-  const rx = [];
+  const rx = [], sp = [];
   for(let i = 0; i < 11; i++){
-    const resCalc = swe.calc_ut(jdUT, i, swe.SEFLG_SPEED);
+    const resCalc = ast.calc_ut(jdUT, i, ast.SEFLG_SPEED);
     lon.push(nm(resCalc[0]));
     rx.push(i < 10 && resCalc[3] < 0);
+    sp.push(resCalc[3]);
   }
 
   // Extra points: 11 Lilith, 12 South Node, 13 Part of Fortune, 14 Vertex (the last two need the birth time).
   const sys = $("hs").value, ext = $("ext").checked;
-  lon[11] = ext ? nm(swe.meanApogee(jdUT)) : null;
+  lon[11] = ext ? nm(ast.meanApogee(jdUT)) : null;
   lon[12] = ext ? nm(lon[10] + 180) : null;
   lon[13] = lon[14] = null;
   for(let i = 11; i < NB; i++) rx.push(false);
+  sp[11] = 0.1114; sp[12] = sp[10]; sp[13] = sp[14] = null;   // mean apogee moves ~0.111 deg/day; Fortune and Vertex have no useful speed
 
   let housesRes = null;
   if(known){
-    const h = swe.houses(jdUT, place.lat, place.lon, sys);
+    const h = ast.houses(jdUT, place.lat, place.lon, sys);
     housesRes = {
       asc: nm(h.ascmc[0]),
       mc: nm(h.ascmc[1]),
-      c: Array.from(h.cusps).slice(1, 13).map(val => nm(val))
+      c: Array.from(h.cusps).slice(1, 13).map(val => nm(val)),
+      polar: h.polar
     };
     if(ext){
       // Day birth (Sun above the horizon): Asc + Moon - Sun. Night birth: Asc + Sun - Moon.
@@ -703,9 +749,15 @@ function calc(){
     }
   }
 
-  const stars = STARS.map(([n, ra, dec, ly]) => ({n, l: nm(swe.star(jdUT, ra, dec, ly))})).sort((a, b) => a.l - b.l);
+  const sens = known ? ascSensitivity(jdUT, place.lat, place.lon) : null;
+  const warn = [];
+  if(housesRes && housesRes.polar) warn.push("polar");
+  if(tzr.hist) warn.push("hist");
+  if(y < 1970) warn.push("old");
 
-  return {lon, rx, known, h: housesRes, place, sys, ext, asp: $("asp").value, stars};
+  const stars = STARS.map(([n, ra, dec, ly], i) => ({n, i, l: nm(ast.star(jdUT, ra, dec, ly))})).sort((a, b) => a.l - b.l);
+
+  return {lon, rx, sp, known, h: housesRes, place, sys, ext, asp: $("asp").value, stars, tz: tzr.tz, offMin, sens, warn, example: !userSubmitted && !store.d};
 }
 
 /* ---------- Extra sections: aspect grid, element/modality distribution, fixed stars ---------- */
@@ -719,6 +771,73 @@ function chartPoints(res){
 const lonOf = (res, id) => id === "A" ? res.h.asc : id === "M" ? res.h.mc : res.lon[id];
 const ptLabel = id => id === "A" ? "AC" : id === "M" ? "MC" : PG[id];
 
+
+/* ---------- Precision, interpretation helpers and chart patterns ---------- */
+// How fast the ascendant moves at this moment and place: degrees per 4 min, and minutes until the rising sign changes.
+function ascSensitivity(jd, lat, lon){
+  const A = dt => nm(ast.houses(jd + dt / 1440, lat, lon, "E").ascmc[0]);
+  const a0 = A(0), s0 = Math.floor(a0 / 30);
+  const shift = Math.abs(((A(4) - A(-4) + 540) % 360) - 180) / 2;
+  let up = null, dn = null;
+  for(let m = 1; m <= 360 && (up === null || dn === null); m++){
+    if(up === null && Math.floor(A(m) / 30) !== s0) up = m;
+    if(dn === null && Math.floor(A(-m) / 30) !== s0) dn = m;
+  }
+  return {asc: a0, shift, lim: Math.min(up === null ? 1e9 : up, dn === null ? 1e9 : dn)};
+}
+const psText = (i, s) => { const T = L[lang]; return (i < 10 && T.ps && T.ps[i][s]) || (T.kw[s] + "."); };
+const housePlanet = (i, h) => { const T = L[lang]; return i < 10 ? `${T.pf[i]}: ${T.emph} ${T.hth[h - 1]}.` : T.hs[h - 1]; };
+const pfOf = (T, v) => v === "A" ? T.pfA : v === "M" ? T.pfM : T.pf[+v];
+function pairText(a, b){
+  const T = L[lang], isP = v => /^\d+$/.test(String(v)) && +v < 10;
+  if(isP(a) && isP(b)){ const t2 = T.pair[Math.min(+a, +b) + "-" + Math.max(+a, +b)]; if(t2) return t2; }
+  return `${T.thm}: ${pfOf(T, a)} · ${pfOf(T, b)}.`;
+}
+
+function findPatterns(res){
+  const T = L[lang], out = [], P = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const nmP = i => `<span class="sym">${PG[i]}</span> ${T.body[i]}`;
+  const grp = fn => { const g = {}; P.forEach(i => (g[fn(i)] = g[fn(i)] || []).push(i)); return g; };
+  const bs = grp(i => readSign(res.lon[i]));
+  const personal = g => g.filter(i => i < 5).length >= 2;   // a generational group (e.g. Saturn+Uranus+Neptune) is not a personal stellium
+  Object.keys(bs).forEach(k => { if(bs[k].length >= 3 && personal(bs[k])) out.push(T.pst(`${T.sign[k]} <span class="sym">${SIGN[k]}</span>`, bs[k].map(nmP).join(", "))); });
+  if(res.known){
+    const bh = grp(i => houseOf(res.lon[i], res.h.c));
+    Object.keys(bh).forEach(k => { if(bh[k].length >= 4 && personal(bh[k])) out.push(T.psth(T.hn(+k), bh[k].map(nmP).join(", "))); });
+  }
+  // aspect test with the pattern orb: base orb, narrowed for slow bodies
+  const is = (a, b, ai) => {
+    let d = Math.abs(res.lon[a] - res.lon[b]) % 360; if(d > 180) d = 360 - d;
+    return Math.abs(d - ASPT[ai][0]) <= Math.min(6, ASPT[ai][1] * Math.min(1, (BF[a] + BF[b]) / 2));
+  };
+  for(const a of P) for(const b of P){
+    if(b <= a) continue;
+    if(is(a, b, 8)) for(const c of P) if(c !== a && c !== b && is(a, c, 4) && is(b, c, 4)) out.push(T.ptsq(nmP(a), nmP(b), nmP(c)));
+    if(is(a, b, 3)) for(const c of P) if(c !== a && c !== b && is(a, c, 7) && is(b, c, 7)) out.push(T.pyod(nmP(a), nmP(b), nmP(c)));
+    if(is(a, b, 5)) for(const c of P) if(c > b && is(a, c, 5) && is(b, c, 5)){
+      const el = [a, b, c].map(i => readSign(res.lon[i]) % 4), same = el[0] === el[1] && el[1] === el[2];
+      out.push(T.pgt([a, b, c].map(nmP).join(", "), same ? T.el[el[0]].toLowerCase() : ""));
+    }
+  }
+  return out;
+}
+function patternSection(res, T){
+  const box = document.createElement("div"); box.className = "sec";
+  const pats = findPatterns(res);
+  box.innerHTML = `<h2>${T.pat}</h2><p class="note">${T.patN}</p>` + (pats.length ? `<ul class="pat">${pats.map(x => `<li>${x}</li>`).join("")}</ul>` : `<p class="note">${T.patNone}</p>`);
+  return box;
+}
+function astroView(res, T){
+  const d = document.createElement("details"); d.className = "guide";
+  const rows = [];
+  if(res.known){ rows.push(["AC", res.h.asc, null]); rows.push(["MC", res.h.mc, null]); }
+  res.lon.forEach((l, i) => { if(l != null) rows.push([`<span class="sym">${PG[i]}</span> ${T.body[i]}`, l, res.sp[i]]); });
+  d.innerHTML = `<summary>${T.aT}</summary><p class="note">${T.aN}</p><div class="tw"><table><thead><tr>${T.aTh.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`
+    + rows.map(r => `<tr><td>${r[0]}</td><td>${fmtN(r[1], 3)}</td><td>${r[2] == null ? "–" : fmtN(r[2], 3)}</td><td>${r[2] == null ? "–" : T.aDir[r[2] < 0 ? 1 : 0]}</td></tr>`).join("")
+    + "</tbody></table></div>";
+  return d;
+}
+
 function aspectGrid(res, T){
   const ids = chartPoints(res), major = res.asp === "major", box = document.createElement("div");
   box.className = "sec";
@@ -728,9 +847,9 @@ function aspectGrid(res, T){
   for(let i = 1; i < ids.length; i++){
     h += `<tr><th class="sym">${ptLabel(ids[i])}</th>`;
     for(let j = 0; j < i; j++){
-      const f = aspectOf(lonOf(res, ids[i]), lonOf(res, ids[j]), major);
+      const f = aspectRes(res, ids[i], ids[j], major);
       if(f){
-        h += `<td class="sym" style="color:${ASPT[f.ai][2]}" data-tip="a|${ids[j]}|${ids[i]}|${f.ai}|${f.off.toFixed(1)}" tabindex="0" role="button" aria-label="${T.an[f.ai]}">${ASPT[f.ai][3]}</td>`;
+        h += `<td class="sym" style="color:${ASPT[f.ai][2]}" data-tip="a|${ids[j]}|${ids[i]}|${f.ai}|${f.off.toFixed(1)}|${f.ap}" tabindex="0" role="button" aria-label="${T.an[f.ai]}">${ASPT[f.ai][3]}</td>`;
       } else h += "<td></td>";
     }
     h += "</tr>";
@@ -760,13 +879,14 @@ function distribution(res, T){
 function starTable(res, T){
   const ids = []; for(let i = 0; i < NB; i++){ if(res.lon[i] != null) ids.push(i); } if(res.known) ids.push("A", "M");
   const name = id => id === "A" ? T.asc : id === "M" ? T.mc : `<span class="sym">${PG[id]}</span> ${T.body[id]}`;
+  const dd = x => { const tm = Math.round(x * 60); return Math.floor(tm / 60) + "°" + String(tm % 60).padStart(2, "0") + "′"; };
   const box = document.createElement("div"); box.className = "tw sec";
   let h = `<h2>${T.stars}</h2><p class="note">${T.starsN}</p><table class="stars"><thead><tr>${T.sth.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`;
   res.stars.forEach(st => {
-    const cj = ids.map(id => { let d = Math.abs(lonOf(res, id) - st.l) % 360; if(d > 180) d = 360 - d; return {id, d}; })
-      .filter(x => x.d < 1).sort((a, b) => a.d - b.d).map(x => `${name(x.id)} (${deg(x.d)})`);
-    const s = readSign(st.l);
-    h += `<tr${cj.length ? ' class="hit"' : ""}><td>${st.n}</td><td><span class="sym">${SIGN[s]}</span> ${T.sign[s]}</td><td>${deg(st.l)}</td><td>${cj.join(", ") || "–"}</td></tr>`;
+    let best = null;
+    ids.forEach(id => { let d = Math.abs(lonOf(res, id) - st.l) % 360; if(d > 180) d = 360 - d; if(!best || d < best.d) best = {id, d}; });
+    const hit = best.d < 1, s = readSign(st.l);
+    h += `<tr${hit ? ' class="hit"' : ""}><td>${st.n}</td><td><span class="sym">${SIGN[s]}</span> ${T.sign[s]}</td><td>${deg(st.l)}</td><td>${name(best.id)} (${dd(best.d)})${hit ? " – " + T.conjw : ""}</td><td>${T.starM[st.i]}</td></tr>`;
   });
   box.innerHTML = h + "</tbody></table>";
   return box;
@@ -779,7 +899,14 @@ function render(){
   const h2 = document.createElement("h2");
   h2.textContent = res.place.n + " · " + $("d").value.split("-").reverse().join(".") + (res.known ? " " + $("tm").value : "");
   box.appendChild(h2);
-  
+
+  if(res.example){ const bn = document.createElement("div"); bn.className = "banner"; bn.textContent = T.exBanner; box.appendChild(bn); }
+  if(res.warn.length){
+    const w = document.createElement("div"); w.className = "warn"; w.setAttribute("role", "note");
+    w.innerHTML = res.warn.map(k => "<p>" + (k === "polar" ? T.wPolar(fmtN(Math.abs(res.place.lat), 1)) : k === "hist" ? T.wHist(res.tz) : T.wOld) + "</p>").join("");
+    box.appendChild(w);
+  }
+
   const zb = document.createElement("div"); zb.className = "zbar";
   zb.innerHTML = `<button type="button" aria-label="${T.zout}" title="${T.zout}">−</button><button type="button" aria-label="${T.zin}" title="${T.zin}">+</button><button type="button" aria-label="${T.zreset}" title="${T.zreset}">↺</button>`;
   box.appendChild(zb);
@@ -787,28 +914,40 @@ function render(){
   initZoom(ch, svgEl, zb);
   const hp = document.createElement("p"); hp.className = "help chart-hint"; hp.textContent = T.chartHint; box.appendChild(hp);
   const act = document.createElement("div"); act.className = "act"; act.innerHTML = `<button type="button" id="b1">${T.svg}</button><button type="button" id="b2">${T.png}</button>`; box.appendChild(act);
-  
+
+  const gd = document.createElement("details"); gd.className = "guide"; gd.open = !!res.example;
+  gd.innerHTML = `<summary>${T.gT}</summary><ul>${T.gL.map(x => `<li>${x}</li>`).join("")}</ul><p>${T.gD}</p>`;
+  box.appendChild(gd);
+
+  const as = document.createElement("div"); as.className = "sec";
+  as.innerHTML = `<p class="note">${T.tzLine(res.tz, offStr(res.offMin))}</p>`
+    + (res.sens ? `<p class="note">${T.sens(T.sign[readSign(res.sens.asc)], deg(res.sens.asc), fmtN(res.sens.shift, 1), res.sens.lim < 1e9 ? res.sens.lim : 0)}</p>` : "");
+  box.appendChild(as);
+
   const rows = [];
   if(res.known){ rows.push([T.asc, res.h.asc, null, T.ascm, "A"]); rows.push([T.mc, res.h.mc, null, "", "M"]); }
   res.lon.forEach((l, i) => { if(l != null) rows.push([T.body[i], l, res.known ? houseOf(l, res.h.c) : "", i < 5 ? T.mean[i] : "", i, res.rx[i]]); });
-  
+
   const q = document.createElement("div");
   q.innerHTML = `<h2>${T.quick}</h2><p class="note" style="margin:2px 0 10px">${T.quickIntro}</p><div class="quick"></div>`;
   const qs = q.lastChild;
   (res.known ? [rows[0]] : []).concat(rows.filter(r => typeof r[4] == "number" && r[4] < 5)).forEach(r => {
-    const s = readSign(r[1]), dv = document.createElement("div"); dv.className = "q";
-    dv.innerHTML = `<b><span class="g sym">${r[4] == "A" ? "↑" : PG[r[4]]}</span>${r[0]}: ${T.sign[s]} <span class="sym">${SIGN[s]}</span></b><p>${r[3]} – ${T.kw[s]}</p>`;
+    const s = readSign(r[1]), dv = document.createElement("div"); dv.className = "q"; const isP = typeof r[4] == "number";
+    dv.innerHTML = `<b><span class="g sym">${r[4] == "A" ? "↑" : PG[r[4]]}</span>${r[0]}: ${T.sign[s]} <span class="sym">${SIGN[s]}</span></b><p>${r[3]} – ${isP ? psText(r[4], s) : T.kw[s]}</p>`
+      + (isP && res.known ? `<p>${T.hn(r[2])}: ${housePlanet(r[4], r[2])}</p>` : "");
     qs.appendChild(dv);
   });
   box.appendChild(q);
-  
+
   const tb = document.createElement("div"); tb.className = "tw";
   tb.innerHTML = `<h2>${T.full}</h2><table><thead><tr>${T.th.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr><td>${typeof r[4] == "number" ? `<span class="sym" style="color:var(--amber)">${PG[r[4]]}</span> ` : ""}${r[0]}</td><td><span class="sym">${SIGN[readSign(r[1])]}</span> ${T.sign[readSign(r[1])]}</td><td>${deg(r[1])}${r[5] ? " ℞" : ""}</td><td>${r[2] || ""}</td></tr>`).join("")}</tbody></table>`;
   box.appendChild(tb);
-  
+
   box.appendChild(aspectGrid(res, T));
+  box.appendChild(patternSection(res, T));
   box.appendChild(distribution(res, T));
   box.appendChild(starTable(res, T));
+  box.appendChild(astroView(res, T));
 
   const n = document.createElement("p"); n.className = "note";
   n.textContent = (res.known ? "" : T.untime + " ") + T.rx + ". " + T.note + (res.known ? " " + T.hsn[res.sys] + "." : "") + (res.ext && res.known ? " " + T.fort : "");
@@ -834,8 +973,8 @@ function tipHTML(key){
     let b = `<p>${T.pd[i]}</p>`;
     if(i >= 7 && i <= 9) b += `<p>${T.slow}</p>`;
     if(i === 1 && !res.known) b += `<p>${T.moonN}</p>`;
-    b += `<p><b>${T.ins} ${T.sign[s]}:</b> ${T.kw[s]}.</p>`;
-    if(cu){ const h = houseOf(l, cu); b += `<p><b>${T.hn(h)}:</b> ${T.hs[h - 1]}</p>`; }
+    b += `<p><b>${T.ins} ${T.sign[s]}:</b> ${psText(i, s)}</p>`;
+    if(cu){ const h = houseOf(l, cu); b += `<p><b>${T.hn(h)}:</b> ${housePlanet(i, h)}</p>`; }
     return head(pl(i), su) + b;
   }
   if(k === "s"){
@@ -855,7 +994,7 @@ function tipHTML(key){
     const nameOf = v => v === "A" ? T.asc : v === "M" ? T.mc : pl(+v), ti = +q[3];
     const orb = lang === "fi" ? q[4].replace(".", ",") : q[4];
     return head(`${T.an[ti]} (${ASPT[ti][0]}°)`, `${nameOf(q[1])} – ${nameOf(q[2])}`)
-      + `<p>${T.ad[ti]}</p><p class="dim">${T.orbL}: ${orb}°</p>`;
+      + `<p>${pairText(q[1], q[2])}</p><p>${T.ad[ti]}</p><p class="dim">${T.orbL}: ${orb}°${q[5] === "1" ? " · " + T.apl : q[5] === "0" ? " · " + T.sep : ""}</p>`;
   }
   return "";
 }
@@ -935,7 +1074,7 @@ $("rs").addEventListener("click", () => {
   $("man").checked = false; $("mb").style.display = "none"; pi.disabled = cs.disabled = false;
   $("la").value = "60.17"; $("lo").value = "24.94"; $("tz").value = "Europe/Helsinki";
   cs.value = "FI"; cur = {n:"Helsinki", lat:60.17, lon:24.94, tz:"Europe/Helsinki"}; pi.value = "Helsinki"; sg.hidden = true;
-  $("er").textContent = ""; Z.s = 1; Z.cx = Z.cy = 400;
+  $("er").textContent = ""; userSubmitted = false; Z.s = 1; Z.cx = Z.cy = 400;
   const r = calc(); if(r){ window.RES = r; render(); }
 });
 
@@ -1049,6 +1188,7 @@ function save(png){
 
 $("f").addEventListener("submit", e => {
   Z.s = 1; Z.cx = Z.cy = 400;
+  userSubmitted = true;
   e.preventDefault();
   const r = calc();
   if(!r) return;

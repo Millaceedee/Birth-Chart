@@ -154,6 +154,21 @@ table.at{width:100%;table-layout:fixed;margin:0}
 .at th,.at td{width:auto;min-width:0;height:26px;padding:0;font-size:13px}
 .at th{font-size:11px}
 }
+
+/* --- notices, guide, chart patterns --- */
+.banner{border:1px dashed var(--lav);border-radius:2px;padding:10px 14px;color:var(--lav);font-size:14.5px}
+.warn{border-left:3px solid var(--amber);background:var(--plum);padding:10px 14px;display:grid;gap:8px;font-size:14.5px;line-height:1.5}
+.warn p{margin:0}
+details.guide{background:var(--plum);border-left:3px solid var(--lav);padding:10px 14px;min-width:0}
+details.guide summary{cursor:pointer;color:var(--lav);font-size:17px;letter-spacing:.04em}
+details.guide summary:focus-visible{outline:2px solid var(--rose);outline-offset:3px}
+details.guide[open] summary{margin-bottom:6px}
+details.guide ul{margin:6px 0 8px 18px;display:grid;gap:4px;font-size:14.5px}
+details.guide p{font-size:14px;color:var(--dim);margin-top:6px}
+details.guide .tw{margin-top:8px}
+.pat{list-style:none;padding:0;display:grid;gap:8px}
+.pat li{background:var(--plum);border-left:3px solid var(--amber);padding:9px 14px;font-size:14.5px;line-height:1.5}
+.stars td:last-child{color:var(--dim);font-size:13.5px;min-width:200px}
 </style>
 </head>
 <body>
@@ -314,6 +329,7 @@ if(!reduce)requestAnimationFrame(function(ts){last=ts;requestAnimationFrame(fram
 })();
 </script>
 <script src="js/astronomy.js"></script>
+<script src="js/interp.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
