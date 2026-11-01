@@ -23,9 +23,16 @@ class AstroCalc {
     return AE.Ecliptic(v).elon;
   }
   calc_ut(jd, pl) {
-    const a = this.#lon(jd, pl), b = this.#lon(jd + 0.01, pl);
-    if (a == null || b == null) return null;   // only Chiron/asteroids: outside the 1800-2100 table
-    let sp = ((b - a + 540) % 360 - 180) / 0.01;
+    const a = this.#lon(jd, pl);
+    if (a == null) return null;   // only Chiron/asteroids: outside the 1800-2100 table
+    // Speed (deg/day) from a central difference (+-0.005 d); the old forward difference was biased by up to ~0.003 deg/day
+    // for the Moon and ~0.001 for Mercury, which matters near stations. At the very ends of the asteroid table fall back to a one-sided step.
+    const h = 0.005, lo = this.#lon(jd - h, pl), hi = this.#lon(jd + h, pl);
+    let sp;
+    if (lo != null && hi != null) sp = ((hi - lo + 540) % 360 - 180) / (2 * h);
+    else if (hi != null) sp = ((hi - a + 540) % 360 - 180) / h;
+    else if (lo != null) sp = ((a - lo + 540) % 360 - 180) / h;
+    else return null;
     return [a, 0, 1, sp, 0, 0];
   }
   // Chiron (15), Ceres (16), Pallas (17), Juno (18), Vesta (19): offline table in js/ephemeris.js
@@ -261,7 +268,7 @@ hsn:{P:"Placidus-talot",K:"Koch-talot",W:"Whole Sign -talot",E:"Equal-talot"},
 aspm:"Aspektit",aspAll:"Pää- ja sivuaspektit",aspMaj:"Vain pääaspektit",ext:"Näytä lisäpisteet (Lilith, eteläinen solmu, Fortuna, Vertex, Chiron, Ceres, Pallas, Juno, Vesta)",hExt:"Fortuna ja Vertex vaativat tarkan kellonajan.",
 aspT:"Aspektitaulukko",aspN:"Vihreä = sujuva, punainen = jännite, violetti = hienovarainen, kulta = konjunktio. Napauta tai vie hiiri ruudun päälle nähdäksesi selityksen.",
 dist:"Alkuaineet ja ominaisuudet",distN:"Mukana Aurinko–Pluto sekä, jos kellonaika on tiedossa, nousumerkki ja MC.",dom:"Vallitseva alkuaine",domM:"Vallitseva ominaisuus",
-stars:"Kiinteät tähdet",starsN:"Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Konjunktio = alle 1° päässä planeetasta, pisteestä tai akselista.",sth:["Tähti","Merkki","Aste","Konjunktio"],untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
+stars:"Kiinteät tähdet",starsN:"Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Konjunktio (oletusraja) = alle 1° päässä planeetasta, pisteestä tai akselista; taulukossa on 17 valittua tähteä.",sth:["Tähti","Merkki","Aste","Konjunktio"],untime:"Kellonaika ei ole tiedossa, joten nousumerkki ja talot jätetään pois.",rx:"Rx = taaksepäinen",
 intro:"Mitä tarkemmat syntymätiedot ovat, sitä tarkempi kartasta tulee. Kartan voi laskea myös ilman kellonaikaa. Tiedot tallentuvat tähän selaimeen, ja Nollaa-painike poistaa ne.",
 hDate:"Syntymäpäivä määrittää esimerkiksi aurinkomerkkisi eli tutun horoskooppimerkkisi sekä planeettojen sijainnit.",
 hTime:"Kellonaika määrittää esimerkiksi nousumerkkisi ja talojen jaon. Jos et tiedä sitä, valitse ruutu: kartta piirretään silloin ilman nousumerkkiä ja taloja, ja Kuun sijainti on vain suuntaa antava.",
@@ -316,7 +323,7 @@ hsn:{P:"Placidus houses",K:"Koch houses",W:"Whole Sign houses",E:"Equal houses"}
 aspm:"Aspects",aspAll:"Major and minor aspects",aspMaj:"Major aspects only",ext:"Show extra points (Lilith, South Node, Fortune, Vertex, Chiron, Ceres, Pallas, Juno, Vesta)",hExt:"Fortune and Vertex need an exact birth time.",
 aspT:"Aspect grid",aspN:"Green = flowing, red = tension, violet = subtle, gold = conjunction. Tap or hover a cell for an explanation.",
 dist:"Elements and modalities",distN:"Includes Sun to Pluto and, if the birth time is known, the ascendant and MC.",dom:"Dominant element",domM:"Dominant modality",
-stars:"Fixed stars",starsN:"Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Conjunct = within 1° of a planet, point or axis.",sth:["Star","Sign","Degree","Conjunct"],untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
+stars:"Fixed stars",starsN:"Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Conjunct (default limit) = within 1° of a planet, point or axis; the table has 17 selected stars.",sth:["Star","Sign","Degree","Conjunct"],untime:"Birth time is unknown, so ascendant and houses are left out.",rx:"Rx = retrograde",
 intro:"The more precise your birth details are, the more precise the chart will be. A chart can also be made without the time of birth. Your details are saved in this browser, and the Reset button clears them.",
 hDate:"The date of birth determines, for example, your Sun sign (the zodiac sign you already know) and the positions of the planets.",
 hTime:"The time of birth determines, for example, your rising sign and the division of the houses. If you don’t know it, tick the box: the chart is then drawn without the ascendant and houses, and the Moon’s position is only approximate.",
@@ -359,6 +366,7 @@ M:"The highest point of the chart. Describes career, goals and public role.",
 I:"The lowest point of the chart. Describes home, roots and your private inner life."}}};
 
 Object.assign(L.fi, INTERP.fi); Object.assign(L.en, INTERP.en);
+if(window.EXTRA_TXT){ Object.assign(L.fi, EXTRA_TXT.fi); Object.assign(L.en, EXTRA_TXT.en); }   // js/extras.js: texts of the added sections
 ["fi", "en"].forEach(k => ["body", "pd", "pf"].forEach(f => L[k][f].push(...MINOR[k][f])));   // js/minor.js: Chiron and asteroids   // js/interp.js: extra interpretations and notices
 
 // Language preference is stored under the existing, explicitly requested key.
@@ -736,7 +744,8 @@ function aspectRes(res, ia, ib, majorOnly){
   if(sa != null && sb != null){
     let dd = nm(b - a); if(dd > 180) dd -= 360;
     const e = Math.abs(dd) - ASPT[f.ai][0], de = Math.sign(dd) * (sb - sa);
-    if(Math.abs(e) > 0.005 && de !== 0) f.ap = e * de < 0 ? 1 : 0;
+    // Relative angular speed below ~0.001 deg/day is inside the numerical noise of the speeds (nodes, asteroid table): not reported.
+    if(Math.abs(e) > 0.005 && Math.abs(de) >= 0.001) f.ap = e * de < 0 ? 1 : 0;
   }
   return f;
 }
@@ -748,73 +757,213 @@ function houseOf(l, cu){
   return 1;
 }
 
+
 function calc(){
-  const er = $("er"); er.textContent = "";
-  const dv = $("d").value; if(!dv){ er.textContent = t("baddate"); return null; }
+  const er = $("er");
+  er.textContent = "";
+
+  const dv = $("d").value;
+  if(!dv){
+    er.textContent = t("baddate");
+    return null;
+  }
+
   let place;
+
   if($("man").checked){
-    const la = parseFloat($("la").value.replace(",", ".")), lo = parseFloat($("lo").value.replace(",", ".")), tz = $("tz").value.trim();
-    try{ new Intl.DateTimeFormat("en", {timeZone: tz}); } catch(e){ er.textContent = t("badco"); return null; }
-    if(!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)){ er.textContent = t("badco"); return null; }
+    const la = parseFloat($("la").value.replace(",", "."));
+    const lo = parseFloat($("lo").value.replace(",", "."));
+    const tz = $("tz").value.trim();
+
+    try{
+      new Intl.DateTimeFormat("en", {timeZone: tz});
+    } catch(e){
+      er.textContent = t("badco");
+      return null;
+    }
+
+    if(!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)){
+      er.textContent = t("badco");
+      return null;
+    }
+
     place = {lat: la, lon: lo, tz, n: la + ", " + lo};
   } else {
-    if(!cur){ er.textContent = t("pick"); return null; }
+    if(!cur){
+      er.textContent = t("pick");
+      return null;
+    }
     place = cur;
   }
-  const [y, m, d] = dv.split("-").map(Number), known = !$("unk").checked, [H, M] = known ? ($("tm").value || "12:00").split(":").map(Number) : [12, 0];
+
+  const [y, m, d] = dv.split("-").map(Number);
+  const known = !$("unk").checked;
+  const [H, M] = known
+    ? ($("tm").value || "12:00").split(":").map(Number)
+    : [12, 0];
+
   const tzr = resolveTz(place, y, m, d);
   const u = new Date(toUTC(y, m, d, H, M, tzr.tz));
   const offMin = tzOff(u.getTime(), tzr.tz);
-  const jdUT = ast.julday(u.getUTCFullYear(), u.getUTCMonth() + 1, u.getUTCDate(), u.getUTCHours() + u.getUTCMinutes() / 60);
 
+  const jdUT = ast.julday(
+    u.getUTCFullYear(),
+    u.getUTCMonth() + 1,
+    u.getUTCDate(),
+    u.getUTCHours() + u.getUTCMinutes() / 60
+  );
+
+  // Main planetary positions and speeds
   const lon = [];
-  const rx = [], sp = [];
+  const rx = [];
+  const sp = [];
+
   for(let i = 0; i < 11; i++){
     const resCalc = ast.calc_ut(jdUT, i, ast.SEFLG_SPEED);
+
     lon.push(nm(resCalc[0]));
-    rx.push(i < 10 && resCalc[3] < 0);
     sp.push(resCalc[3]);
+
+    // Sun through Pluto: preserve original retrograde logic.
+    rx.push(i < 10 && resCalc[3] < 0);
   }
 
-  // Extra points: 11 Lilith, 12 South Node, 13 Part of Fortune, 14 Vertex (the last two need the birth time).
-  const sys = $("hs").value, ext = $("ext").checked;
+  // North Node: distinguish direct, retrograde and uncertain motion.
+  const northNodeState = nodeStatus(sp[10]);
+
+  // Only mark North Node retrograde when its direction is sufficiently clear.
+  rx[10] = northNodeState.label === "retrograde";
+
+  // Extra points: 11 Lilith, 12 South Node,
+  // 13 Part of Fortune, 14 Vertex.
+  const sys = $("hs").value;
+  const ext = $("ext").checked;
+
   lon[11] = ext ? nm(ast.meanApogee(jdUT)) : null;
   lon[12] = ext ? nm(lon[10] + 180) : null;
-  lon[13] = lon[14] = null;
-  for(let i = 11; i < NB; i++) rx.push(false);
-  sp[11] = 0.1114; sp[12] = sp[10]; sp[13] = sp[14] = null;   // mean apogee moves ~0.111 deg/day; Fortune and Vertex have no useful speed
-  // Chiron and the four large asteroids (15-19). Left out (null) outside the 1800-2100 table.
-  for(let i = 15; i < NB; i++){
-    const r = ext ? ast.calc_ut(jdUT, i) : null;
-    lon[i] = r ? nm(r[0]) : null; sp[i] = r ? r[3] : null; rx[i] = !!r && r[3] < 0;
+  lon[13] = null;
+  lon[14] = null;
+
+  // Initialize extra-point retrograde flags.
+  for(let i = 11; i < NB; i++){
+    rx.push(false);
   }
 
+  sp[11] = 0.1114;
+  sp[12] = sp[10];
+  sp[13] = null;
+  sp[14] = null;
+
+  // Chiron and the four large asteroids (15-19).
+  // Left out outside the 1800-2100 table.
+  for(let i = 15; i < NB; i++){
+    const r = ext ? ast.calc_ut(jdUT, i) : null;
+
+    lon[i] = r ? nm(r[0]) : null;
+    sp[i] = r ? r[3] : null;
+    rx[i] = !!r && r[3] < 0;
+  }
+
+  // House calculations require a known birth time.
   let housesRes = null;
+
   if(known){
-    const h = ast.houses(jdUT, place.lat, place.lon, sys);
+    const h = ast.houses(
+      jdUT,
+      place.lat,
+      place.lon,
+      sys
+    );
+
     housesRes = {
       asc: nm(h.ascmc[0]),
       mc: nm(h.ascmc[1]),
-      c: Array.from(h.cusps).slice(1, 13).map(val => nm(val)),
+      c: Array.from(h.cusps)
+        .slice(1, 13)
+        .map(val => nm(val)),
       polar: h.polar
     };
+
     if(ext){
-      // Day birth (Sun above the horizon): Asc + Moon - Sun. Night birth: Asc + Sun - Moon.
+      // Day birth: Asc + Moon - Sun.
+      // Night birth: Asc + Sun - Moon.
       const day = nm(lon[0] - housesRes.asc) >= 180;
-      lon[13] = nm(day ? housesRes.asc + lon[1] - lon[0] : housesRes.asc + lon[0] - lon[1]);
+
+      lon[13] = nm(
+        day
+          ? housesRes.asc + lon[1] - lon[0]
+          : housesRes.asc + lon[0] - lon[1]
+      );
+
       lon[14] = nm(h.ascmc[3]);
     }
   }
 
-  const sens = known ? ascSensitivity(jdUT, place.lat, place.lon) : null;
+  const sens = known
+    ? ascSensitivity(jdUT, place.lat, place.lon)
+    : null;
+
   const warn = [];
+
   if(housesRes && housesRes.polar) warn.push("polar");
   if(tzr.hist) warn.push("hist");
   if(y < 1970) warn.push("old");
 
-  const stars = STARS.map(([n, ra, dec, ly], i) => ({n, i, l: nm(ast.star(jdUT, ra, dec, ly))})).sort((a, b) => a.l - b.l);
+  const stars = STARS
+    .map(([n, ra, dec, ly], i) => ({
+      n,
+      i,
+      l: nm(ast.star(jdUT, ra, dec, ly))
+    }))
+    .sort((a, b) => a.l - b.l);
 
-  return {lon, rx, sp, known, h: housesRes, place, sys, ext, asp: $("asp").value, stars, tz: tzr.tz, offMin, sens, warn, example: !userSubmitted && !store.d};
+  return {
+    lon,
+    rx,
+    sp,
+    known,
+    h: housesRes,
+    place,
+    sys,
+    ext,
+    asp: $("asp").value,
+    stars,
+    tz: tzr.tz,
+    offMin,
+    sens,
+    warn,
+    example: !userSubmitted && !store.d,
+    nodeState: northNodeState
+  };
+}
+
+
+function nodeStatus(speedDegPerDay) {
+  const s = Number(speedDegPerDay) || 0;
+  const abs = Math.abs(s);
+
+  const UNCERTAIN_MAX = 0.0005; // deg/day
+  const WARNING_MAX = 0.0020;    // deg/day
+
+  if (abs <= UNCERTAIN_MAX) {
+    return { label: "uncertain", short: "±", stable: false, warn: true };
+  }
+
+  if (abs <= WARNING_MAX) {
+    return {
+      label: s < 0 ? "retrograde" : "direct",
+      short: s < 0 ? "R" : "D",
+      stable: false,
+      warn: true
+    };
+  }
+
+  return {
+    label: s < 0 ? "retrograde" : "direct",
+    short: s < 0 ? "R" : "D",
+    stable: true,
+    warn: false
+  };
 }
 
 /* ---------- Extra sections: aspect grid, element/modality distribution, fixed stars ---------- */
@@ -938,14 +1087,21 @@ function starTable(res, T){
   const name = id => id === "A" ? T.asc : id === "M" ? T.mc : `<span class="sym">${PG[id]}</span> ${T.body[id]}`;
   const dd = x => { const tm = Math.round(x * 60); return Math.floor(tm / 60) + "°" + String(tm % 60).padStart(2, "0") + "′"; };
   const box = document.createElement("div"); box.className = "tw sec";
-  let h = `<h2>${T.stars}</h2><p class="note">${T.starsN}</p><table class="stars"><thead><tr>${T.sth.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`;
-  res.stars.forEach(st => {
+  const rows = res.stars.map(st => {
     let best = null;
     ids.forEach(id => { let d = Math.abs(lonOf(res, id) - st.l) % 360; if(d > 180) d = 360 - d; if(!best || d < best.d) best = {id, d}; });
-    const hit = best.d < 1, s = readSign(st.l);
-    h += `<tr${hit ? ' class="hit"' : ""}><td>${st.n}</td><td><span class="sym">${SIGN[s]}</span> ${T.sign[s]}</td><td>${deg(st.l)}</td><td>${name(best.id)} (${dd(best.d)})${hit ? " – " + T.conjw : ""}</td><td>${T.starM[st.i]}</td></tr>`;
+    return {st, best, hit: best.d < 1, s: readSign(st.l)};
   });
-  box.innerHTML = h + "</tbody></table>";
+  const hits = rows.filter(r => r.hit);
+  // Summary first, so it is clear whether any star actually touches the chart; meanings are shown only for those that do.
+  let h = `<h2>${T.stars}</h2><p class="note">${T.starsN}</p><p class="note" style="color:${hits.length ? "var(--amber)" : "var(--bone)"}">${hits.length ? T.x_stSum1(hits.length) : T.x_stSum0}</p>`;
+  if(hits.length) h += `<div class="quick">${hits.map(r => `<div class="q" style="border-left-color:var(--amber)"><b>${r.st.n}</b> <span class="sym">${SIGN[r.s]}</span> ${T.sign[r.s]} ${deg(r.st.l)}<p>${T.conjw}: ${name(r.best.id)} (${dd(r.best.d)})</p><p>${T.starM[r.st.i]}</p></div>`).join("")}</div>`;
+  h += `<table class="stars"><thead><tr>${T.sth.slice(0, 4).map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    h += `<tr${r.hit ? ' class="hit"' : ""}><td>${r.st.n}</td><td><span class="sym">${SIGN[r.s]}</span> ${T.sign[r.s]}</td><td>${deg(r.st.l)}</td><td>${name(r.best.id)} (${dd(r.best.d)})${r.hit ? " – " + T.conjw : ""}</td></tr>`;
+  });
+  h += `</tbody></table><details class="guide"><summary>${T.x_stRef}</summary><ul>${rows.map(r => `<li><strong>${r.st.n}:</strong> ${T.starM[r.st.i]}</li>`).join("")}</ul></details>`;
+  box.innerHTML = h;
   return box;
 }
 
@@ -982,16 +1138,16 @@ function render(){
   box.appendChild(as);
 
   const rows = [];
-  if(res.known){ rows.push([T.asc, res.h.asc, null, T.ascm, "A"]); rows.push([T.mc, res.h.mc, null, "", "M"]); }
-  res.lon.forEach((l, i) => { if(l != null) rows.push([T.body[i], l, res.known ? houseOf(l, res.h.c) : "", i < 5 ? T.mean[i] : "", i, res.rx[i]]); });
+  if(res.known){ rows.push([T.asc, res.h.asc, null, T.ascm, "A"]); rows.push([T.mc, res.h.mc, null, "", "M"]); } res.lon.forEach((l, i) => { if(l == null) return; const retro = i === 10 ? res.nodeState && res.nodeState.label === "retrograde" : !!res.rx[i]; rows.push([T.body[i], l, res.known ? houseOf(l, res.h.c) : "", i < 5 ? T.mean[i] : "", i, retro]);});
 
   const q = document.createElement("div");
   q.innerHTML = `<h2>${T.quick}</h2><p class="note" style="margin:2px 0 10px">${T.quickIntro}</p><div class="quick"></div>`;
   const qs = q.lastChild;
-  (res.known ? [rows[0]] : []).concat(rows.filter(r => typeof r[4] == "number" && r[4] < 5)).forEach(r => {
+  (res.known ? [rows[0]] : []).concat(rows.filter(r => typeof r[4] == "number" && r[4] < (T.x_mean ? 10 : 5))).forEach(r => {
     const s = readSign(r[1]), dv = document.createElement("div"); dv.className = "q"; const isP = typeof r[4] == "number";
     dv.innerHTML = `<b><span class="g sym">${r[4] == "A" ? "↑" : PG[r[4]]}</span>${r[0]}: ${T.sign[s]} <span class="sym">${SIGN[s]}</span></b><p>${r[3]} – ${isP ? psText(r[4], s) : T.kw[s]}</p>`
-      + (isP && res.known ? `<p>${T.hn(r[2])}: ${housePlanet(r[4], r[2])}</p>` : "");
+      + (isP && res.known ? `<p>${T.hn(r[2])}: ${housePlanet(r[4], r[2])}</p>` : "")
+      + (isP && r[4] >= 7 ? `<p>${T.slow}</p>` : "");
     qs.appendChild(dv);
   });
   box.appendChild(q);
@@ -999,10 +1155,13 @@ function render(){
   const tb = document.createElement("div"); tb.className = "tw";
   tb.innerHTML = `<h2>${T.full}</h2><table><thead><tr>${T.th.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr><td>${typeof r[4] == "number" ? `<span class="sym" style="color:var(--amber)">${PG[r[4]]}</span> ` : ""}${r[0]}</td><td><span class="sym">${SIGN[readSign(r[1])]}</span> ${T.sign[readSign(r[1])]}</td><td>${deg(r[1])}${r[5] ? " ℞" : ""}</td><td>${r[2] || ""}</td></tr>`).join("")}</tbody></table>`;
   box.appendChild(tb);
+  if(window.EXTRAS) EXTRAS.mount(box, res, T, "pos");   // js/extras.js
 
   box.appendChild(aspectGrid(res, T));
+  if(window.EXTRAS) EXTRAS.mount(box, res, T, "asp");
   box.appendChild(patternSection(res, T));
   box.appendChild(distribution(res, T));
+  if(window.EXTRAS) EXTRAS.mount(box, res, T, "dist");
   box.appendChild(starTable(res, T));
   box.appendChild(astroView(res, T));
 
@@ -1026,7 +1185,7 @@ function tipHTML(key){
     const i = +q[1], l = res.lon[i], s = readSign(l);
     let su = sg(l);
     if(cu) su += " · " + T.hn(houseOf(l, cu));
-    if(res.rx[i]) su += " · ℞ " + T.retro;
+	if (i === 10) { if (res.nodeState && res.nodeState.label === "uncertain") { su += " · ± uncertain"; } else if (res.nodeState && res.nodeState.label === "retrograde") {	su += " · ℞ " + T.retro; }} else if (res.rx[i]) {  su += " · ℞ " + T.retro;	}
     let b = `<p>${T.pd[i]}</p>`;
     if(i >= 7 && i <= 9) b += `<p>${T.slow}</p>`;
     if(i === 1 && !res.known) b += `<p>${T.moonN}</p>`;
@@ -1051,7 +1210,8 @@ function tipHTML(key){
     const nameOf = v => v === "A" ? T.asc : v === "M" ? T.mc : pl(+v), ti = +q[3];
     const orb = lang === "fi" ? q[4].replace(".", ",") : q[4];
     return head(`${T.an[ti]} (${ASPT[ti][0]}°)`, `${nameOf(q[1])} – ${nameOf(q[2])}`)
-      + `<p>${pairText(q[1], q[2])}</p><p>${T.ad[ti]}</p><p class="dim">${T.orbL}: ${orb}°${q[5] === "1" ? " · " + T.apl : q[5] === "0" ? " · " + T.sep : ""}</p>`;
+      + `<p>${pairText(q[1], q[2])}</p><p>${T.ad[ti]}</p><p class="dim">${T.orbL}: ${orb}°${q[5] === "1" ? " · " + T.apl : q[5] === "0" ? " · " + T.sep : ""}</p>`
+      + (window.EXTRAS ? EXTRAS.aspectTip(res, q[1], q[2]) : "");
   }
   return "";
 }

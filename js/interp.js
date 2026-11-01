@@ -89,7 +89,7 @@ starM: [
 "Eteläisen kalan suu, kuninkaallinen tähti. Ihanteellisuus ja unelmat; perinteisesti kunnia mutta myös pettymykset."
 ],
 sth: ["Tähti","Merkki","Aste","Lähin kohde","Perinteinen merkitys"],
-starsN: "Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Lähin kohde näyttää planeetan, pisteen tai akselin ja etäisyyden asteina; alle 1° etäisyys on konjunktio ja rivi korostuu. Merkitykset ovat perinteisiä tulkintoja, joille ei ole tieteellistä näyttöä.",
+starsN: "Paikat on laskettu vuoden 2000 koordinaateista syntymähetkeen (prekessio huomioitu, tähtien oma liike ei). Lähin kohde näyttää planeetan, pisteen tai akselin ja etäisyyden ekliptisen pituuden mukaan. Oletuksena konjunktio on alle 1° etäisyys (rivi korostuu); tämä on rajaus, ei tähden vaikutuksen todellinen raja. Taulukossa on vain 17 valittua tähteä, ei koko tähtikatalogia. Tähtien oma liike (muutama kaariminuutti vuosisadassa kirkkailla tähdillä) ei ole mukana. Merkitykset ovat perinteisiä tulkintoja, joille ei ole tieteellistä näyttöä.",
 conjw: "konjunktio",
 pat: "Kartan kuviot",
 patN: "Tunnistetaan Auringosta Plutoon: stellium (3+ planeettaa samassa merkissä tai 4+ samassa talossa), T-neliö, suuri trigoni ja yod. Orbit ovat hieman tiukemmat kuin aspektitaulukossa.",
@@ -198,7 +198,7 @@ starM: [
 "The mouth of the Southern Fish, a royal star. Idealism and dreams; traditionally honour but also disappointment."
 ],
 sth: ["Star","Sign","Degree","Nearest point","Traditional meaning"],
-starsN: "Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Nearest point shows the planet, point or axis and the distance in degrees; within 1° is a conjunction and the row is highlighted. The meanings are traditional readings with no scientific support.",
+starsN: "Positions are computed from year-2000 coordinates to the moment of birth (precession included, stars’ own motion not). Nearest point shows the planet, point or axis and the distance in ecliptic longitude. By default a conjunction is within 1° (the row is highlighted); this is a cut-off, not a true limit of a star’s influence. The table has only 17 selected stars, not a full star catalogue. The stars’ own motion (a few arcminutes per century for the bright ones) is not included. The meanings are traditional readings with no scientific support.",
 conjw: "conjunction",
 pat: "Chart patterns",
 patN: "Detected among Sun to Pluto: stellium (3+ planets in one sign or 4+ in one house), T-square, grand trine and yod. Orbs are slightly tighter than in the aspect grid.",

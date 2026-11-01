@@ -1,0 +1,104 @@
+Swiss Ephemeris (pyswisseph 2.10.03), ephemeris used: Moshier
+1140 dates (120 random, 10 direction changes x 101 grid points, 10 fixed/birth)
+app.js replica check: max lon diff 0.0e+00 deg, max speed diff 0.0e+00 deg/day (must be ~0)
+
+=== 1. DEFINITION CHECK (before interpreting anything) ===
+Swiss TRUE_NODE is an osculating node. Here it is rebuilt from Swiss' own Moon position+velocity with the same
+cross-product formula the app uses, in 4 frame variants. The variant that matches Swiss TRUE_NODE shows which
+definition Swiss uses; the app is then compared against that same definition as well.
+quantity compared to Swiss TRUE_NODE longitude      RMS (arcsec)  max (arcsec)
+  Swiss Moon vectors, apparent+nutation                      1.033         2.912
+  Swiss Moon vectors, apparent, mean ecl.(NONUT)            12.884        19.037
+  Swiss Moon vectors, true pos+nutation                      0.932         2.666
+  Swiss Moon vectors, true pos, mean ecl.(NONUT)            12.874        18.701
+  APP (Astronomy Engine Moon)                                   12.921        35.574
+  APP vs best-matching Swiss-Moon variant                       13.030        35.522   (best = 'true pos+nutation')
+  -> best variant matches Swiss TRUE_NODE to 0.932" RMS. Any larger app-vs-Swiss gap is ephemeris/numerics, not definition.
+
+  1b. Amplification check. The osculating node is where the Moon's orbit plane cuts the ecliptic, so a small error
+      in the Moon's latitude is magnified roughly 1/tan(5.145 deg) = 11.1 times in the node longitude.
+      Moon latitude  app - Swiss(true pos): RMS 1.63"  max 5.64"
+      Moon lat. rate app - Swiss          : RMS 0.46"/day  max 1.54"/day
+      node longitude app - Swiss          : RMS 12.92"   (ratio node/lat = 7.9)
+      -> A ~1-2" Moon latitude difference between the two Moon theories is enough to explain the node gap. This is
+         consistent with 'ephemeris difference, amplified', not proof of which Moon theory is closer to the truth.
+
+=== 2. APP vs SWISS: longitude (arcsec) and speed (deg/day) ===
+
+--- fixed + birth + random dates (n=130) ---
+  longitude  app - Swiss     : mean   -4.147"  RMS  12.921"  max  35.574"
+  speed      app - Swiss reported speed: mean -0.000174  RMS  0.003337  max  0.013163  deg/day
+  speed      app - Swiss node, fine diff   : mean -0.000200  RMS  0.003335  max  0.013192  deg/day
+  speed      app - same-definition rebuild: mean -0.000199  RMS  0.003328  max  0.012872  deg/day
+
+--- grid around direction changes (n=1010) ---
+  longitude  app - Swiss     : mean   +3.905"  RMS   8.350"  max  21.882"
+  speed      app - Swiss reported speed: mean -0.000431  RMS  0.001940  max  0.006411  deg/day
+  speed      app - Swiss node, fine diff   : mean -0.000439  RMS  0.001947  max  0.006436  deg/day
+  speed      app - same-definition rebuild: mean -0.000491  RMS  0.001930  max  0.006381  deg/day
+
+  Examples (jd, app lon, swiss lon, app speed, swiss speed, swiss fine-diff speed):
+   1900-01-01 00.00h UT                          260.26824  260.26727  -0.015226  -0.015577  -0.015422
+   1950-06-15 12.00h UT                            3.91412    3.91015  -0.221791  -0.219717  -0.219685
+   1969-07-20 20.30h UT                          352.47548  352.47599  +0.016171  +0.016811  +0.016841
+   1985-03-01 06.00h UT                           51.03444   51.03386  -0.030599  -0.031945  -0.031889
+   2000-01-01 12.00h UT                          123.95212  123.95290  -0.055110  -0.054382  -0.054387
+   2010-12-21 08.50h UT                          272.73491  272.73611  -0.000767  -0.000769  -0.000763
+   2024-02-29 23.90h UT                           16.00242   16.00697  +0.029707  +0.029822  +0.029780
+   2050-07-01 00.00h UT                          229.86778  229.86711  -0.001751  -0.001795  -0.001788
+   2099-12-31 12.00h UT                          349.84831  349.85210  -0.043480  -0.042964  -0.042801
+   birth 1990-05-17 14:30 (UTC+3) -> 1990-05-17 11:30 UT  310.24908  310.24524  +0.003313  +0.001710  +0.001727
+
+=== 3. DIRECTION CHANGES (zero of node speed; grid +-1.0 d, 0.02 d spacing) ===
+  Columns app-X: time by which the app's speed crosses zero later(+)/earlier(-) than reference X, in minutes.
+  'window' = total time inside the grid in which the app's ℞ flag differs from Swiss' (flag = speed<0).
+  #  kind                 swiss jd   accel  app-swiss  app-fine app-rebuild    window sign err
+  0  retro->direct   2451551.75327   0.014      +5.4m     +6.1m      +12.5m       0m        0
+  1  direct->retro   2451558.08493  -0.010     +66.6m    +65.9m      +50.1m      86m        0
+  2  retro->direct   2451564.89488   0.003     +25.7m    +27.5m      +70.5m       0m        0
+  3  direct->retro   2451567.53128  -0.002    +562.4m   +562.7m     +631.4m     576m        0
+  4  retro->direct   2451571.89985   0.009     -63.6m    -64.5m      -49.4m      58m        0
+  5  direct->retro   2451579.04284  -0.012      -4.9m     -5.6m      -17.5m      29m        0
+  6  retro->direct   2451587.39315   0.017      -0.2m     +0.5m       +5.8m      29m        0
+  7  direct->retro   2451592.34087  -0.020      -2.5m     -3.6m      -12.0m       0m        0
+  8  retro->direct   2451601.39141   0.025    +388.8m   +390.1m     +387.5m     403m        9
+  9  direct->retro   2451606.31999  -0.027      -0.6m     -1.8m       -6.4m       0m        0
+  ('none' = the speed does not cross zero within +-1 d of Swiss' crossing. accel in deg/day^2: small accel = shallow,
+   ill-conditioned turning point, where tiny speed errors move the crossing by hours.)
+  ℞ flag app vs Swiss on 130 non-grid dates: 2 mismatches (|Swiss speed| of those: 0.0044, 0.0006 deg/day)
+
+=== 4. NUMERICAL NOISE of the app's differences ===
+  The node longitude uses an inner central difference of the Moon (d=0.02 d) and the speed an outer central
+  difference of the node (h=0.005 d). Rounding noise e in longitude becomes speed noise ~ e/(h*sqrt2).
+  longitude noise (cubic-fit residual, 41 samples/0.0005 d): median 4.08e-12 deg, max 4.18e-09 deg
+  -> predicted speed noise (worst case) 5.91e-07 deg/day   [threshold 0.0001]
+  Sensitivity of speed to the step sizes (max over all dates), relative to the app's d=0.02, h=0.005:
+   variant              max |speed - app speed|
+   d0.0025_h0.005                      7.11e-06
+   d0.0025_h0.01                       6.09e-06
+   d0.0025_h0.05                       9.12e-06
+   d0.005_h0.005                       7.84e-06
+   d0.005_h0.01                        2.98e-06
+   d0.005_h0.05                        9.18e-06
+   d0.01_h0.005                        2.99e-06
+   d0.01_h0.01                         1.84e-06
+   d0.01_h0.05                         9.37e-06
+   d0.02_h0.01                         8.14e-07
+   d0.02_h0.05                         9.98e-06
+   d0.04_h0.005                        2.42e-06
+   d0.04_h0.01                         2.73e-06
+   d0.04_h0.05                         1.24e-05
+  => changing only the inner step d (0.0025 ... 0.04) moves speed by at most 7.84e-06 deg/day
+  => changing only the outer step h (0.005 ... 0.05)  moves speed by at most 9.98e-06 deg/day
+
+=== 5. VERDICT: is the speed reliable enough for the ℞ marker? ===
+  numerical noise (predicted worst case) : 5.91e-07 deg/day            -> OK (limit 0.0001)
+  ℞ sign mismatches where |Swiss v|>0.002  : 9                          -> PROBLEM
+  direction changes without app crossing : 0 of 10                    -> OK
+  worst timing error where both cross    : 631.4 min                -> TOO LARGE (limit 30)
+  expected share of birth moments with a different ℞ flag than Swiss: ~0.21%  (10 direction changes in 400 d, mean disagreement window 118 min)
+
+  VERDICT: NUMERICALLY CLEAN, BUT NOT RELIABLE NEAR DIRECTION CHANGES (see failed lines).
+  Reading guide: noise tests the 0.02 d / 0.005 d differences themselves (independent of any reference).
+  Timing / sign tests measure the app's Moon vs Swiss' Moon, amplified by the node's sensitivity (section 1b).
+  They cannot say which Moon theory is closer to the truth; for that rerun with --ephe-path (Swiss data files).

@@ -42,7 +42,6 @@ The positions of Chiron (2060), Ceres (1), Pallas (2), Juno (3) and Vesta (4) ar
 - **Coverage:** 1 January 1800 to early 2101, which also bounds the dates for which these five bodies are shown.
 - **Contents:** heliocentric, geometric positions in the J2000 ecliptic frame (AU, UT), sampled every 16 days and stored as integers in units of 10⁻⁶ AU (base64). This keeps all five bodies to roughly 550 kB, compared with several megabytes for daily samples.
 - **In the browser:** the position at the moment of birth is interpolated with 8-point Lagrange interpolation, combined with Earth's position from Astronomy Engine, corrected for light travel time and annual aberration, and converted to the true ecliptic of date, the same frame as the planets.
-- **Rebuilding the file:** run `py tools/build_ephemeris.py` on a computer with an internet connection (Python 3, no extra packages). It queries the Horizons API and rewrites `js/ephemeris.js`.
 
 Chiron, Ceres, Pallas, Juno and Vesta are not affiliated with or endorsed by NASA or JPL. NASA/JPL are credited as the source of the underlying orbital data only.
 
@@ -67,6 +66,15 @@ Want to learn how I built Birth Chart?
 I've created a mini tutorial showing how I made this interactive birth chart. The tutorial is available on Patreon behind a paywall.
 
 **[📖 Read the Birth Chart mini tutorial on Patreon](https://www.patreon.com/Millaceedee/posts/creating-birth-173683060)** 🔒
+
+## Development Tools
+
+The repository also includes two Python tools in the `tools/` directory, used to build and validate astronomical calculations.
+
+- **Lunar Node Validator** (`tools/Lunar-Node-Validator/node_check.py`): Compares the application's true lunar node calculations against Swiss Ephemeris, examining longitude, speed, retrograde status and direction changes.
+- **NASA Ephemeris Builder** (`tools/NASA-Ephemeris-Builder/build_ephemeris.py`): Downloads orbital data from NASA/JPL Horizons and generates the precomputed ephemeris file used for Chiron and the asteroids.
+
+These tools are for development and validation. They are not required to run the website.
 
 ## Original creator
 
