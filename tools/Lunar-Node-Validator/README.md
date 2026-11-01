@@ -7,7 +7,7 @@ central differences. The app's JavaScript files are only read, never modified.
 ## Requirements
 - Python >= 3.8 and `pip install pyswisseph` (no numpy). 
 - Node.js >= 16 (no npm packages).
-- The project folder with `js/app.js`, `js/astronomy.js`, `js/ephemeris.js` (unzip `Birth-Chart-korjattu.zip`).
+- The project folder with `js/app.js`, `js/astronomy.js`, `js/ephemeris.js` (unzip `Birth-Chart.zip`).
 - Optional: Swiss Ephemeris data files (`sepl_*.se1`, `semo_*.se1`) for `--ephe-path`. Without them Swiss runs in
   its built-in Moshier mode (a few arc seconds for the Moon, so "app - Swiss" is NOT "app error").
 
