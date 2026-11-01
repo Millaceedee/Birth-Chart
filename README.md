@@ -33,7 +33,7 @@ Birth Chart calculates everything entirely client-side in your browser. **No API
 - **Lunar Node:** The true North Node.
 - **Time Zones:** Local birth time is converted to universal time using the selected IANA time zone.
 
-This project does **not** use Swiss Ephemeris at runtime; it uses the local Astronomy Engine library for the main calculations.
+This project does **not** use Swiss Ephemeris or any external ephemeris data files at runtime. The main calculations are performed by the local Astronomy Engine library, and the minor-body tables are stored in the repository.
 
 ### Chiron and asteroid data (NASA/JPL Horizons)
 
